@@ -1,157 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PNC Student's Schedule</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #f8fafc;
-        }
-        .main-wrapper {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            width: 100vw;
-        }
-        .calendar-container {
-            flex-grow: 1;
-            width: 100%;
-            position: relative;
-        }
-        iframe {
-            border: 0;
-            width: 100%;
-            height: 100%;
-        }
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-        }
-        optgroup {
-            font-weight: bold;
-            color: #1e293b;
-            background: #f1f5f9;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia Scheduler | PNC Calendar</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="main-wrapper">
-        <!-- Compact Header -->
-        <header class="bg-white border-b border-slate-200 px-4 py-3 flex flex-col lg:flex-row items-center justify-between gap-4 shrink-0">
-            
-
-            <!-- Double Selectors Container -->
-            <div class="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-3">
-                
-                <!-- Class Selector -->
-                <div class="w-full sm:w-auto flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden xl:block">Classes:</span>
-                    <select id="classSelect" onchange="updateCalendar('class')" class="w-full sm:w-48 pl-3 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-700 transition-all cursor-pointer">
-                        <option value="" disabled selected>Select Class...</option>
-                        <optgroup label="Year 2">
-                            <option value="c_4641706806a2bc464ecfce3054fce93b2ebd72161c407d074ba961f730e4d793@group.calendar.google.com">Y2-A</option>
-                            <option value="c_60f24913a85bf20e950e70146ff604d69d14749a316da204fa485e7d6731a12b@group.calendar.google.com">Y2-B</option>
-                            <option value="c_2da1c687af3c99d3ecaf14bbc5d82b9cc9b0fc75dcca546fd690ea5070091940@group.calendar.google.com">Y2-C</option>
-                        </optgroup>
-                        <optgroup label="Year 1">
-                            <option value="c_dab09f6598d565f82430eaa5c51ab4b01045bb20a340a7273f4a67a911c6f61c@group.calendar.google.com">Y1-A</option>
-                            <option value="c_2e32feb66be240456f961cc2f43c0bbef9c5ff6cbb68abdea333adf1739f9833@group.calendar.google.com">Y1-B</option>
-                            <option value="c_4f19b4ea9a24523bb7910e4d19bb0f426abdfc3e2b67850a4d5770e4755674db@group.calendar.google.com">Y1-C</option>
-                            <option value="c_60360764ac056113deb843d3bc1a8dd6e66a0bbddcf4dbd1ff4ea3453417dc3e@group.calendar.google.com">Y1-D</option>
-                        </optgroup>
-                    </select>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-text">
+                        <img src="logo.png" alt="Logo" style="max-height: 45px; display: block;">
+                    </div>
                 </div>
 
-                <!-- Teacher Selector -->
-                <div class="w-full sm:w-auto flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden xl:block">Teachers:</span>
-                    <select id="teacherSelect" onchange="updateCalendar('teacher')" class="w-full sm:w-48 pl-3 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium text-slate-700 transition-all cursor-pointer">
-                        <option value="" disabled selected>Select Teacher...</option>
-                        <option value="passerellesnumeriques.org_343437393530363136@resource.calendar.google.com">Him</option>
-                        <option value="passerellesnumeriques.org_2d3331373838323735363330@resource.calendar.google.com">Lavy</option>
-                        <option value="c_1885a09ufiueqj6hn3tv09m5ngs5c@resource.calendar.google.com">Mesa</option>
-                        <option value="c_1886h9lqonri4ig0noe2vrfvp8fb8@resource.calendar.google.com">Mengheang</option>
-                        <option value="c_188b20cg9s5uoh12jobk987cfbh2g@resource.calendar.google.com">Ouchi</option>
-                        <option value="passerellesnumeriques.org_3733323437383733383932@resource.calendar.google.com">Puthy</option>
-                        <option value="passerellesnumeriques.org_2d3132393337373934393735@resource.calendar.google.com">Rady</option>
-                        <option value="passerellesnumeriques.org_3539373731343733353932@resource.calendar.google.com">Savoeurn</option>
-                        <option value="passerellesnumeriques.org_2d3633393338303431343434@resource.calendar.google.com">Sokhom</option>
-                        <option value="c_1884lpdesdih0irbl36ss1j7vt7aq@resource.calendar.google.com">Sreyleap</option>
-                        <option value="c_1882ckecmfgb0h7fmha0u9t3rbd5g@resource.calendar.google.com">Yon</option>
-                    </select>
-                </div>
-
-            </div>
-        </header>
-
-        <!-- Full Screen Calendar Area -->
-        <main class="calendar-container">
-            <div id="loading" class="absolute inset-0 flex items-center justify-center bg-white z-10 transition-opacity duration-300">
-                <div class="flex flex-col items-center">
-                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-                    <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">Updating View...</p>
+                <!-- Custom Week Navigation -->
+                <div class="week-navigation"
+                    style="margin-top: 24px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <button id="prev-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
+                            class="fas fa-chevron-left"></i></button>
+                    <div style="text-align: center; cursor: pointer;" id="today-btn" title="Go to Today">
+                        <div style="font-weight: 700; color: var(--primary-color); font-size: 14px;">Week <span
+                                id="current-week-num"></span></div>
+                        <div id="current-month-year"
+                            style="font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        </div>
+                    </div>
+                    <button id="next-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
+                            class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
-            <iframe id="calendarFrame" src="" frameborder="0" scrolling="no"></iframe>
+
+            <div class="sidebar-filters" style="margin-top: 0; border-top: none;">
+                <div class="filter-group">
+                    <label class="section-title">Trainers</label>
+                    <div class="checkbox-list scrollable" id="teacher-filters">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label class="section-title">Classes</label>
+                    <div class="checkbox-list scrollable" id="class-filters">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="content-body" style="padding: 0; height: 100vh; overflow: hidden;">
+                <div class="calendar-container" style="height: 100vh; width: 100%; overflow: hidden;">
+                    <iframe id="google-calendar-iframe" style="border: 0; width: 100%; height: calc(100vh + 50px);"
+                        frameborder="0"></iframe>
+                </div>
+            </div>
         </main>
     </div>
 
-    <script>
-        function updateCalendar(source) {
-            const classSelector = document.getElementById('classSelect');
-            const teacherSelector = document.getElementById('teacherSelect');
-            const iframe = document.getElementById('calendarFrame');
-            const loading = document.getElementById('loading');
-            
-            let selectedValue = "";
-
-            if (source === 'class') {
-                selectedValue = classSelector.value;
-                teacherSelector.selectedIndex = 0;
-            } else if (source === 'teacher') {
-                selectedValue = teacherSelector.value;
-                classSelector.selectedIndex = 0;
-            } else {
-                // Initial load: Default to Y2-A
-                classSelector.selectedIndex = 1; 
-                selectedValue = classSelector.value;
-            }
-
-            if (!selectedValue) return;
-
-            const calendarId = encodeURIComponent(selectedValue);
-            
-            loading.style.opacity = '1';
-            loading.classList.remove('hidden');
-            
-            const baseUrl = "https://calendar.google.com/calendar/embed";
-            const params = `?src=${calendarId}&mode=WEEK&showTitle=0&showPrint=0&showTabs=1&showCalendars=0&showTz=1&wkst=1&bgcolor=%23ffffff`;
-            
-            iframe.src = baseUrl + params;
-
-            iframe.onload = () => {
-                loading.style.opacity = '0';
-                setTimeout(() => {
-                    loading.classList.add('hidden');
-                }, 300);
-            };
-        }
-
-        updateCalendar();
-        
-        window.addEventListener('resize', () => {
-            const wrapper = document.querySelector('.main-wrapper');
-            wrapper.style.height = window.innerHeight + 'px';
-        });
-    </script>
+    <script src="app.js"></script>
 </body>
+
 </html>
