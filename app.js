@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { id: 'ouchi', name: 'Ouchi', calendarId: 'c_188b20cg9s5uoh12jobk987cfbh2g@resource.calendar.google.com', color: '06B6D4', role: 'ENG/PL Trainer' },
         { id: 'sokhom', name: 'Sokhom', calendarId: 'passerellesnumeriques.org_2d3633393338303431343434@resource.calendar.google.com', color: 'F97316', role: 'ENG/PL Coor' },
         { id: 'sreyleap', name: 'Sreyleap', calendarId: 'c_1884lpdesdih0irbl36ss1j7vt7aq@resource.calendar.google.com', color: '14B8A6', role: 'English Trainer' },
-        { id: 'puthy', name: 'Puthy', calendarId: 'passerellesnumeriques.org_3733323437383733383932@resource.calendar.google.com', color: '6366F1', role: 'ENG/PL Trainer' },
+        { id: 'puthy', name: 'Puthy', calendarId: 'passerellesnumeriques.org_3733323437383733383932@resource.calendar.google.com', color: '6366F1', role: 'PL Trainer' },
         { id: 'mesa', name: 'Mesa', calendarId: 'c_1885a09ufiueqj6hn3tv09m5ngs5c@resource.calendar.google.com', color: '3B82F6', role: 'IT Trainer' }
     ];
 
