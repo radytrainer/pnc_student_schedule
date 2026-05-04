@@ -45,6 +45,10 @@ body {
     padding: 24px;
 }
 
+.week-navigation {
+    margin-top: 24px;
+}
+
 .logo-container {
     display: flex;
     align-items: center;
@@ -125,8 +129,11 @@ body {
     flex-direction: column;
 }
 
-.filter-group label.section-title {
-    display: block;
+.filter-group label.section-title,
+.filter-group summary.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 12px;
     font-weight: 700;
     color: var(--primary-color);
@@ -136,6 +143,22 @@ body {
     margin-bottom: 12px;
     padding: 8px 14px;
     border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    outline: none;
+}
+
+.filter-group summary.section-title::-webkit-details-marker {
+    display: none;
+}
+
+details[open] summary.section-title .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+summary.section-title .fa-chevron-down {
+    transition: transform 0.3s ease;
 }
 
 .checkbox-list {
@@ -505,21 +528,29 @@ body {
 
     .sidebar-header {
         padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .week-navigation {
+        margin-top: 0;
+        padding: 4px 8px !important;
     }
 
     .sidebar-filters {
         padding: 16px;
-        flex-direction: row;
-        overflow-x: auto;
-        gap: 32px;
+        flex-direction: column;
+        overflow-y: auto;
+        gap: 16px;
     }
 
     .filter-group {
-        min-width: 200px;
+        width: 100%;
     }
 
     .checkbox-list.scrollable {
-        max-height: 120px;
+        max-height: 200px;
     }
 
     #week-number-display {

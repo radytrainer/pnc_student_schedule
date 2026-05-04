@@ -181,6 +181,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function handleCollapsibles() {
+        const isMobile = window.innerWidth <= 768;
+        const trainersDetails = document.getElementById('trainers-details');
+        const classesDetails = document.getElementById('classes-details');
+        
+        if (trainersDetails && classesDetails) {
+            if (isMobile) {
+                trainersDetails.removeAttribute('open');
+                classesDetails.removeAttribute('open');
+            } else {
+                trainersDetails.setAttribute('open', '');
+                classesDetails.setAttribute('open', '');
+            }
+        }
+    }
+
+    handleCollapsibles();
+    window.addEventListener('resize', handleCollapsibles);
+
     initFilters();
     updateDateUI();
     updateIframeSource();

@@ -29,7 +29,7 @@
 
                 <!-- Custom Week Navigation -->
                 <div class="week-navigation"
-                    style="margin-top: 24px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <button id="prev-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
                             class="fas fa-chevron-left"></i></button>
                     <div style="text-align: center; cursor: pointer;" id="today-btn" title="Go to Today">
@@ -45,19 +45,25 @@
             </div>
 
             <div class="sidebar-filters" style="margin-top: 0; border-top: none;">
-                <div class="filter-group">
-                    <label class="section-title">Trainers</label>
+                <details class="filter-group" id="trainers-details" open>
+                    <summary class="section-title">
+                        Trainers
+                        <i class="fas fa-chevron-down"></i>
+                    </summary>
                     <div class="checkbox-list scrollable" id="teacher-filters">
                         <!-- Populated by JS -->
                     </div>
-                </div>
+                </details>
 
-                <div class="filter-group">
-                    <label class="section-title">Classes</label>
+                <details class="filter-group" id="classes-details" open>
+                    <summary class="section-title">
+                        Classes
+                        <i class="fas fa-chevron-down"></i>
+                    </summary>
                     <div class="checkbox-list scrollable" id="class-filters">
                         <!-- Populated by JS -->
                     </div>
-                </div>
+                </details>
             </div>
         </aside>
 
