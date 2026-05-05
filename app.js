@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateDateUI();
         updateIframeSource();
         renderDailyCards();
+        updateSessionBadge();
     }
 
     // Initialize UI Filters
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 localStorage.setItem('selectedCalendarId', this.value);
                 updateIframeSource();
                 renderDailyCards();
+                updateSessionBadge();
             });
         });
     }
@@ -210,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if(dailyViewEl) dailyViewEl.style.display = 'block';
                 renderDailyCards();
             }
+            updateSessionBadge();
         });
     });
 
@@ -414,6 +417,98 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // --- SESSION COUNT BADGE ---
+    async function updateSessionBadge() {
+        const badgeEl = document.getElementById('session-count-badge');
+        if (!badgeEl) return;
+
+        const checkedRadio = document.querySelector('input[name="calendar-selection"]:checked');
+        if (!checkedRadio) {
+            badgeEl.style.display = 'none';
+            return;
+        }
+
+        const selectedId = checkedRadio.value;
+        const isTeacher = checkedRadio.id.startsWith('t-');
+        let calendarId = null;
+        let entityName = '';
+
+        if (isTeacher) {
+            const teacher = teachers.find(t => t.id === selectedId);
+            if (teacher) {
+                calendarId = teacher.calendarId;
+                entityName = teacher.name;
+            }
+        } else {
+            const cls = classes.find(c => c.id === selectedId);
+            if (cls) {
+                calendarId = cls.calendarId;
+                entityName = cls.name;
+            }
+        }
+
+        if (!calendarId) {
+            badgeEl.style.display = 'none';
+            return;
+        }
+
+        // Determine if we're in daily or weekly view
+        const isDailyView = window.innerWidth <= 768 &&
+            document.querySelector('.toggle-btn[data-view="day"]')?.classList.contains('active');
+
+        let timeMin, timeMax;
+
+        if (isDailyView) {
+            // Count for the current day
+            timeMin = new Date(currentViewDate);
+            timeMin.setHours(0, 0, 0, 0);
+            timeMax = new Date(currentViewDate);
+            timeMax.setHours(23, 59, 59, 999);
+        } else {
+            // Count for the current week (Sun–Sat)
+            const weekStart = new Date(currentViewDate);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+            weekStart.setHours(0, 0, 0, 0);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6); // Saturday
+            weekEnd.setHours(23, 59, 59, 999);
+            timeMin = weekStart;
+            timeMax = weekEnd;
+        }
+
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+            `key=${GOOGLE_API_KEY}` +
+            `&timeMin=${timeMin.toISOString()}` +
+            `&timeMax=${timeMax.toISOString()}` +
+            `&singleEvents=true` +
+            `&orderBy=startTime` +
+            `&timeZone=Asia/Phnom_Penh`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) { badgeEl.style.display = 'none'; return; }
+            const data = await res.json();
+            const timedEvents = (data.items || []).filter(ev => ev.start && ev.start.dateTime);
+            const count = timedEvents.length;
+
+            const countEl = badgeEl.querySelector('.badge-count');
+            const labelEl = badgeEl.querySelector('.badge-label');
+
+            if (countEl) countEl.textContent = isDailyView ? `${entityName} ${count}` : count;
+            if (labelEl) labelEl.textContent = 'SESSIONS';
+
+            badgeEl.style.display = 'inline-flex';
+
+            // Pulse animation on update
+            badgeEl.classList.remove('session-badge--updated');
+            void badgeEl.offsetWidth; // force reflow
+            badgeEl.classList.add('session-badge--updated');
+        } catch (err) {
+            console.warn('Badge fetch error:', err);
+            badgeEl.style.display = 'none';
+        }
+    }
+
     handleCollapsibles();
     window.addEventListener('resize', handleCollapsibles);
 
@@ -421,6 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
     updateDateUI();
     updateIframeSource();
     renderDailyCards();
+    updateSessionBadge();
 });
 
 // Register Service Worker for PWA
