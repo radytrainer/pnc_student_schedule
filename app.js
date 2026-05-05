@@ -221,8 +221,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Auto-select Daily View on mobile
+    // Auto-select Daily View on mobile, always show today
     if (window.innerWidth <= 768) {
+        currentViewDate = new Date();
+        localStorage.setItem('currentViewDate', currentViewDate.toISOString());
         toggleBtns.forEach(b => b.classList.remove('active'));
         const dailyBtn = document.querySelector('.toggle-btn[data-view="day"]');
         if (dailyBtn) dailyBtn.classList.add('active');
