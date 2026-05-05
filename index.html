@@ -21,26 +21,38 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo-container">
-                    <div class="logo-text">
-                        <img src="logo.png" alt="Logo" style="max-height: 45px; display: block;">
+                <div class="header-top-row">
+                    <div class="logo-container">
+                        <div class="logo-text">
+                            <img src="logo.png" alt="Logo" style="max-height: 40px; display: block;">
+                        </div>
+                    </div>
+
+                    <!-- Custom Week Navigation -->
+                    <div class="week-navigation"
+                        style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <button id="prev-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
+                                class="fas fa-chevron-left"></i></button>
+                        <div style="text-align: center; cursor: pointer;" id="today-btn" title="Go to Today">
+                            <div style="font-weight: 700; color: var(--primary-color); font-size: 14px;">W<span
+                                    id="current-week-num"></span></div>
+                            <div id="current-month-year"
+                                style="font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            </div>
+                        </div>
+                        <button id="next-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
+                                class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
 
-                <!-- Custom Week Navigation -->
-                <div class="week-navigation"
-                    style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <button id="prev-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
-                            class="fas fa-chevron-left"></i></button>
-                    <div style="text-align: center; cursor: pointer;" id="today-btn" title="Go to Today">
-                        <div style="font-weight: 700; color: var(--primary-color); font-size: 14px;">Week <span
-                                id="current-week-num"></span></div>
-                        <div id="current-month-year"
-                            style="font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        </div>
-                    </div>
-                    <button id="next-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
-                            class="fas fa-chevron-right"></i></button>
+                <!-- Mobile View Toggle -->
+                <div class="mobile-view-toggle">
+                    <button class="toggle-btn active" data-view="week">
+                        <i class="fas fa-calendar-week"></i> Weekly View
+                    </button>
+                    <button class="toggle-btn" data-view="day">
+                        <i class="fas fa-calendar-day"></i> Daily View
+                    </button>
                 </div>
             </div>
 
@@ -69,9 +81,23 @@
 
         <main class="main-content">
             <div class="content-body" style="padding: 0; height: 100%; overflow: hidden;">
-                <div class="calendar-container" style="height: 100%; width: 100%; overflow: hidden;">
-                    <iframe id="google-calendar-iframe" style="border: 0; width: 100%; height: calc(100% + 50px);"
-                        frameborder="0"></iframe>
+                <div class="calendar-container" style="height: 100%; width: 100%; overflow: hidden; position: relative;">
+                    <div id="weekly-view" style="height: 100%; width: 100%;">
+                        <iframe id="google-calendar-iframe" style="border: 0; width: 100%; height: calc(100% + 50px);"
+                            frameborder="0"></iframe>
+                    </div>
+                    
+                    <div id="daily-view" class="daily-view-container" style="display: none;">
+                        <div class="daily-navigation">
+                            <button id="prev-day-btn" class="icon-btn"><i class="fas fa-chevron-left"></i></button>
+                            <div id="current-day-display" class="current-day-text">Today</div>
+                            <button id="next-day-btn" class="icon-btn"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        
+                        <div class="sessions-container" id="daily-sessions">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

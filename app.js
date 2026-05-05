@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.setItem('currentViewDate', currentViewDate.toISOString());
         updateDateUI();
         updateIframeSource();
+        renderDailyCards();
     }
 
     // Initialize UI Filters
@@ -147,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
             rb.addEventListener('change', function () {
                 localStorage.setItem('selectedCalendarId', this.value);
                 updateIframeSource();
+                renderDailyCards();
             });
         });
     }
@@ -197,6 +199,211 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // --- DAILY VIEW LOGIC ---
+    const toggleBtns = document.querySelectorAll('.toggle-btn');
+    const weeklyViewEl = document.getElementById('weekly-view');
+    const dailyViewEl = document.getElementById('daily-view');
+
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            toggleBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const view = e.target.getAttribute('data-view');
+            if (view === 'week') {
+                if(weeklyViewEl) weeklyViewEl.style.display = 'block';
+                if(dailyViewEl) dailyViewEl.style.display = 'none';
+            } else {
+                if(weeklyViewEl) weeklyViewEl.style.display = 'none';
+                if(dailyViewEl) dailyViewEl.style.display = 'block';
+                renderDailyCards();
+            }
+        });
+    });
+
+    // Auto-select Daily View on mobile
+    if (window.innerWidth <= 768) {
+        toggleBtns.forEach(b => b.classList.remove('active'));
+        const dailyBtn = document.querySelector('.toggle-btn[data-view="day"]');
+        if (dailyBtn) dailyBtn.classList.add('active');
+        if (weeklyViewEl) weeklyViewEl.style.display = 'none';
+        if (dailyViewEl) dailyViewEl.style.display = 'block';
+    }
+
+    const prevDayBtn = document.getElementById('prev-day-btn');
+    if (prevDayBtn) {
+        prevDayBtn.addEventListener('click', () => {
+            currentViewDate.setDate(currentViewDate.getDate() - 1);
+            saveDateAndUpdate();
+        });
+    }
+
+    const nextDayBtn = document.getElementById('next-day-btn');
+    if (nextDayBtn) {
+        nextDayBtn.addEventListener('click', () => {
+            currentViewDate.setDate(currentViewDate.getDate() + 1);
+            saveDateAndUpdate();
+        });
+    }
+
+    const GOOGLE_API_KEY = 'AIzaSyDXYSqwOaYfYbWHpZR-aeDHCVjq7oXsVbw';
+
+    async function fetchCalendarEvents(calendarId, date) {
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+            `key=${GOOGLE_API_KEY}` +
+            `&timeMin=${dayStart.toISOString()}` +
+            `&timeMax=${dayEnd.toISOString()}` +
+            `&singleEvents=true` +
+            `&orderBy=startTime` +
+            `&timeZone=Asia/Phnom_Penh`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) {
+                console.warn('Calendar API error:', res.status);
+                return [];
+            }
+            const data = await res.json();
+            return data.items || [];
+        } catch (err) {
+            console.warn('Failed to fetch calendar events:', err);
+            return [];
+        }
+    }
+
+    function formatTime(dateStr) {
+        const d = new Date(dateStr);
+        let h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        return `${h}:${m} ${ampm}`;
+    }
+
+    async function renderDailyCards() {
+        const dailySessionsEl = document.getElementById('daily-sessions');
+        if (!dailySessionsEl) return;
+
+        // Update Day Label first
+        const dayLabelEl = document.getElementById('current-day-display');
+        if (dayLabelEl) {
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            dayLabelEl.textContent = currentViewDate.toLocaleDateString('en-US', options);
+        }
+
+        const checkedRadio = document.querySelector('input[name="calendar-selection"]:checked');
+        let color = '5C5CEE';
+        let entityName = 'Select a calendar';
+        let calendarId = null;
+
+        if (checkedRadio) {
+            const selectedId = checkedRadio.value;
+            const isTeacher = checkedRadio.id.startsWith('t-');
+            if (isTeacher) {
+                const teacher = teachers.find(t => t.id === selectedId);
+                if (teacher) { color = teacher.color; entityName = teacher.name; calendarId = teacher.calendarId; }
+            } else {
+                const cls = classes.find(c => c.id === selectedId);
+                if (cls) { color = cls.color; entityName = cls.name; calendarId = cls.calendarId; }
+            }
+        }
+
+        // Show loading state
+        dailySessionsEl.innerHTML = `
+            <div class="session-card" style="--card-accent: #${color}">
+                <div class="session-card__accent"></div>
+                <div class="session-card__body" style="text-align: center; padding: 32px 20px;">
+                    <div class="session-card__title session-card__title--empty">
+                        <i class="fas fa-spinner fa-spin" style="color: #${color}"></i> Loading schedule...
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Fetch real events
+        let events = [];
+        if (calendarId) {
+            events = await fetchCalendarEvents(calendarId, currentViewDate);
+        }
+
+        // Filter to only timed events (not all-day)
+        const timedEvents = events.filter(ev => ev.start && ev.start.dateTime);
+
+        // Render cards
+        dailySessionsEl.innerHTML = '';
+
+        if (timedEvents.length === 0) {
+            // No events — show empty state
+            dailySessionsEl.innerHTML = `
+                <div class="session-card session-card--empty" style="--card-accent: #${color}">
+                    <div class="session-card__accent"></div>
+                    <div class="session-card__body" style="text-align: center; padding: 32px 20px;">
+                        <div class="session-card__empty-icon">
+                            <i class="far fa-calendar-times"></i>
+                        </div>
+                        <div class="session-card__title session-card__title--empty">No classes scheduled</div>
+                        <div class="session-card__subtitle">${entityName} · ${currentViewDate.toLocaleDateString('en-US', { weekday: 'long' })}</div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        timedEvents.forEach((ev, index) => {
+            const title = ev.summary || 'Untitled Event';
+            const startTime = formatTime(ev.start.dateTime);
+            const endTime = ev.end && ev.end.dateTime ? formatTime(ev.end.dateTime) : '';
+            const location = ev.location || '';
+
+            // Calculate duration
+            let durationText = '';
+            if (ev.start.dateTime && ev.end && ev.end.dateTime) {
+                const diffMs = new Date(ev.end.dateTime) - new Date(ev.start.dateTime);
+                const diffMins = Math.round(diffMs / 60000);
+                if (diffMins >= 60) {
+                    const hours = Math.floor(diffMins / 60);
+                    const mins = diffMins % 60;
+                    durationText = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+                } else {
+                    durationText = `${diffMins}m`;
+                }
+            }
+
+            const card = document.createElement('div');
+            card.className = 'session-card';
+            card.style.setProperty('--card-accent', '#' + color);
+
+            card.innerHTML = `
+                <div class="session-card__accent"></div>
+                <div class="session-card__body">
+                    <div class="session-card__top">
+                        <div class="session-card__number" style="background-color: #${color}; color: white;">${index + 1}</div>
+                        <div class="session-card__meta">
+                            <div class="session-card__title">${title}</div>
+                            <div class="session-card__time">
+                                <i class="far fa-clock"></i>
+                                <span>${startTime}</span>
+                                ${endTime ? `<span class="session-card__time-separator">→</span><span>${endTime}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="session-card__chips">
+                        ${durationText ? `<span class="session-chip"><i class="fas fa-hourglass-half"></i> ${durationText}</span>` : ''}
+                        <span class="session-chip"><i class="far fa-user"></i> ${entityName}</span>
+                        ${location ? `<span class="session-chip"><i class="fas fa-map-marker-alt"></i> ${location}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            dailySessionsEl.appendChild(card);
+        });
+    }
+
     function handleCollapsibles() {
         const isMobile = window.innerWidth <= 768;
         const trainersDetails = document.getElementById('trainers-details');
@@ -219,4 +426,5 @@ document.addEventListener('DOMContentLoaded', function () {
     initFilters();
     updateDateUI();
     updateIframeSource();
+    renderDailyCards();
 });
