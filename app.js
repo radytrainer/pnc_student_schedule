@@ -420,11 +420,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- SESSION COUNT BADGE ---
     async function updateSessionBadge() {
         const badgeEl = document.getElementById('session-count-badge');
-        if (!badgeEl) return;
+        const hourBadgeEl = document.getElementById('hour-count-badge');
+        if (!badgeEl || !hourBadgeEl) return;
 
         const checkedRadio = document.querySelector('input[name="calendar-selection"]:checked');
         if (!checkedRadio) {
             badgeEl.style.display = 'none';
+            hourBadgeEl.style.display = 'none';
             return;
         }
 
@@ -449,6 +451,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!calendarId) {
             badgeEl.style.display = 'none';
+            hourBadgeEl.style.display = 'none';
             return;
         }
 
@@ -486,26 +489,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
         try {
             const res = await fetch(url);
-            if (!res.ok) { badgeEl.style.display = 'none'; return; }
+            if (!res.ok) { 
+                badgeEl.style.display = 'none'; 
+                hourBadgeEl.style.display = 'none'; 
+                return; 
+            }
             const data = await res.json();
             const timedEvents = (data.items || []).filter(ev => ev.start && ev.start.dateTime);
             const count = timedEvents.length;
+            const hours = count * 1.5;
 
             const countEl = badgeEl.querySelector('.badge-count');
             const labelEl = badgeEl.querySelector('.badge-label');
+            const hourCountEl = hourBadgeEl.querySelector('.badge-count');
+            const hourLabelEl = hourBadgeEl.querySelector('.badge-label');
 
             if (countEl) countEl.textContent = isDailyView ? `${entityName} ${count}` : count;
             if (labelEl) labelEl.textContent = 'SESSIONS';
 
+            if (hourCountEl) hourCountEl.textContent = hours;
+            if (hourLabelEl) hourLabelEl.textContent = 'HOURS';
+
+            if (isTeacher && count > 15) {
+                const excessHours = hours - 22.5;
+                if (hourCountEl) hourCountEl.textContent = `${hours} (+${excessHours})`;
+                badgeEl.classList.add('session-badge--warning');
+                hourBadgeEl.classList.add('session-badge--warning');
+            } else {
+                badgeEl.classList.remove('session-badge--warning');
+                hourBadgeEl.classList.remove('session-badge--warning');
+            }
+
             badgeEl.style.display = 'inline-flex';
+            hourBadgeEl.style.display = 'inline-flex';
 
             // Pulse animation on update
             badgeEl.classList.remove('session-badge--updated');
+            hourBadgeEl.classList.remove('session-badge--updated');
             void badgeEl.offsetWidth; // force reflow
+            void hourBadgeEl.offsetWidth;
             badgeEl.classList.add('session-badge--updated');
+            hourBadgeEl.classList.add('session-badge--updated');
         } catch (err) {
             console.warn('Badge fetch error:', err);
             badgeEl.style.display = 'none';
+            hourBadgeEl.style.display = 'none';
         }
     }
 

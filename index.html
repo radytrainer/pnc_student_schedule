@@ -27,13 +27,19 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="header-top-row">
-                    <div class="logo-container" style="display: flex; align-items: center; gap: 12px;">
+                    <div class="logo-container" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <div class="logo-text">
                             <img src="logo.png" alt="Logo" style="max-height: 40px; display: block;">
                         </div>
-                        <div id="session-count-badge" class="session-badge" style="display: none;">
-                            <span class="badge-count">0</span>
-                            <span class="badge-label">SESSIONS</span>
+                        <div class="badges-wrapper" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <div id="session-count-badge" class="session-badge" style="display: none;">
+                                <span class="badge-count">0</span>
+                                <span class="badge-label">SESSIONS</span>
+                            </div>
+                            <div id="hour-count-badge" class="session-badge" style="display: none;">
+                                <span class="badge-count">0</span>
+                                <span class="badge-label">HOURS</span>
+                            </div>
                         </div>
                     </div>
 
