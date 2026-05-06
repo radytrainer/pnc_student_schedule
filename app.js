@@ -545,6 +545,80 @@ document.addEventListener('DOMContentLoaded', function () {
     updateIframeSource();
     renderDailyCards();
     updateSessionBadge();
+
+    // --- IDLE SNOWFALL EFFECT ---
+    let idleTimer = null;
+    const IDLE_TIME = 5 * 60 * 1000; // 5 minutes
+    // To test easily, you can temporarily change this to 5000 (5 seconds)
+    let isSnowing = false;
+
+    function startSnow() {
+        if (isSnowing) return;
+        isSnowing = true;
+        document.body.classList.add('winter-mode');
+        createSnowflakes();
+    }
+
+    function stopSnow() {
+        if (!isSnowing) return;
+        isSnowing = false;
+        document.body.classList.remove('winter-mode');
+        const snowContainer = document.getElementById('snow-container');
+        if (snowContainer) {
+            snowContainer.innerHTML = '';
+        }
+    }
+
+    function resetIdleTimer() {
+        if (isSnowing) {
+            // Fade out snow container slowly or just stop
+            const snowContainer = document.getElementById('snow-container');
+            if (snowContainer) {
+                snowContainer.style.opacity = '0';
+                setTimeout(stopSnow, 1000); // Wait for fade out
+            } else {
+                stopSnow();
+            }
+        }
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(startSnow, IDLE_TIME);
+    }
+
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+        window.addEventListener(evt, resetIdleTimer, { passive: true });
+    });
+
+    // Start timer initially
+    resetIdleTimer();
+
+    function createSnowflakes() {
+        let container = document.getElementById('snow-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'snow-container';
+            document.body.appendChild(container);
+        }
+        container.style.opacity = '1';
+        
+        const snowflakeCount = 60;
+        const snowChars = ['❄', '❅', '❆'];
+        
+        for (let i = 0; i < snowflakeCount; i++) {
+            const flake = document.createElement('div');
+            flake.className = 'snowflake';
+            flake.textContent = snowChars[Math.floor(Math.random() * snowChars.length)];
+            
+            // Randomize styling
+            flake.style.color = '#A5B4FC'; // Soft indigo/blue color to be visible on white
+            flake.style.fontSize = `${Math.random() * 14 + 10}px`; // 10px to 24px
+            flake.style.left = `${Math.random() * 100}vw`;
+            flake.style.animationDuration = `${Math.random() * 6 + 5}s`; // 5s to 11s
+            flake.style.animationDelay = `${Math.random() * 5}s`; // Stagger start times
+            flake.style.opacity = Math.random() * 0.6 + 0.4; // 0.4 to 1.0 opacity
+            
+            container.appendChild(flake);
+        }
+    }
 });
 
 // Register Service Worker for PWA

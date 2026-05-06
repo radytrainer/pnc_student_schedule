@@ -810,6 +810,45 @@ summary.section-title .fa-chevron-down {
     letter-spacing: -0.5px;
 }
 
+/* --- IDLE SNOW EFFECT --- */
+#snow-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+    transition: opacity 1s ease-out;
+}
+
+.snowflake {
+    position: absolute;
+    top: -30px;
+    user-select: none;
+    animation-name: snowfall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+}
+
+@keyframes snowfall {
+    0% {
+        transform: translateY(-30px) translateX(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(50vh) translateX(30px) rotate(180deg);
+    }
+    100% {
+        transform: translateY(100vh) translateX(-20px) rotate(360deg);
+    }
+}
+
+body.winter-mode {
+    transition: background-color 2s ease;
+}
+
 .badge-label {
     font-size: 9px;
     font-weight: 700;
