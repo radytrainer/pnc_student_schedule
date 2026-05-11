@@ -31,8 +31,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Date Management
     let currentViewDate = new Date();
     const savedDateStr = localStorage.getItem('currentViewDate');
+    const lastActiveTime = localStorage.getItem('lastActiveTime');
+    const now = Date.now();
+
     if (savedDateStr) {
-        currentViewDate = new Date(savedDateStr);
+        if (!lastActiveTime || (now - parseInt(lastActiveTime) <= 5 * 60 * 1000)) {
+            currentViewDate = new Date(savedDateStr);
+        } else {
+            // Over 5 mins since last active, reset to current date
+            currentViewDate = new Date();
+            localStorage.setItem('currentViewDate', currentViewDate.toISOString());
+        }
     }
 
     function getWeekNumber(d) {
@@ -551,6 +560,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const IDLE_TIME = 5 * 60 * 1000; // 5 minutes
     // To test easily, you can temporarily change this to 5000 (5 seconds)
     let isSnowing = false;
+    let lastStorageWrite = 0;
 
     function startSnow() {
         if (isSnowing) return;
@@ -579,13 +589,36 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 stopSnow();
             }
+            // Reset schedule to current week/date when waking up after 5 minutes
+            currentViewDate = new Date();
+            saveDateAndUpdate();
         }
         clearTimeout(idleTimer);
         idleTimer = setTimeout(startSnow, IDLE_TIME);
+
+        const currentTime = Date.now();
+        if (currentTime - lastStorageWrite > 5000) {
+            localStorage.setItem('lastActiveTime', currentTime.toString());
+            lastStorageWrite = currentTime;
+        }
     }
 
     ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
         window.addEventListener(evt, resetIdleTimer, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const lastActive = localStorage.getItem('lastActiveTime');
+            const currentTime = Date.now();
+            if (lastActive && (currentTime - parseInt(lastActive) > 5 * 60 * 1000)) {
+                currentViewDate = new Date();
+                saveDateAndUpdate();
+            }
+            resetIdleTimer();
+        } else {
+            localStorage.setItem('lastActiveTime', Date.now().toString());
+        }
     });
 
     // Start timer initially
