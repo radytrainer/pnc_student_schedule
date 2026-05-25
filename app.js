@@ -19,13 +19,13 @@ document.addEventListener('DOMContentLoaded', function () {
     ];
 
     const classes = [
-        { id: 'y2a', name: 'Y2-A', room: 'B12', calendarId: 'c_4641706806a2bc464ecfce3054fce93b2ebd72161c407d074ba961f730e4d793@group.calendar.google.com', color: '4F46E5' },
-        { id: 'y2b', name: 'Y2-B', room: 'B13', calendarId: 'c_60f24913a85bf20e950e70146ff604d69d14749a316da204fa485e7d6731a12b@group.calendar.google.com', color: '059669' },
-        { id: 'y2c', name: 'Y2-C', room: 'B22', calendarId: 'c_2da1c687af3c99d3ecaf14bbc5d82b9cc9b0fc75dcca546fd690ea5070091940@group.calendar.google.com', color: 'D97706' },
-        { id: 'y1a', name: 'Y1-A', room: 'A22', calendarId: 'c_dab09f6598d565f82430eaa5c51ab4b01045bb20a340a7273f4a67a911c6f61c@group.calendar.google.com', color: 'DC2626' },
-        { id: 'y1b', name: 'Y1-B', room: 'A21', calendarId: 'c_2e32feb66be240456f961cc2f43c0bbef9c5ff6cbb68abdea333adf1739f9833@group.calendar.google.com', color: '7C3AED' },
-        { id: 'y1c', name: 'Y1-C', room: 'B23', calendarId: 'c_4f19b4ea9a24523bb7910e4d19bb0f426abdfc3e2b67850a4d5770e4755674db@group.calendar.google.com', color: 'DB2777' },
-        { id: 'y1d', name: 'Y1-D', room: 'B31', calendarId: 'c_60360764ac056113deb843d3bc1a8dd6e66a0bbddcf4dbd1ff4ea3453417dc3e@group.calendar.google.com', color: '0891B2' }
+        { id: 'y2a', name: 'WEP/Y2-A', room: 'B12', calendarId: 'c_4641706806a2bc464ecfce3054fce93b2ebd72161c407d074ba961f730e4d793@group.calendar.google.com', color: '4F46E5' },
+        { id: 'y2b', name: 'WEP/Y2-B', room: 'B13', calendarId: 'c_60f24913a85bf20e950e70146ff604d69d14749a316da204fa485e7d6731a12b@group.calendar.google.com', color: '059669' },
+        { id: 'y2c', name: 'WEP/Y2-C', room: 'B22', calendarId: 'c_2da1c687af3c99d3ecaf14bbc5d82b9cc9b0fc75dcca546fd690ea5070091940@group.calendar.google.com', color: 'D97706' },
+        { id: 'y1a', name: 'WEP/Y1-A', room: 'A22', calendarId: 'c_dab09f6598d565f82430eaa5c51ab4b01045bb20a340a7273f4a67a911c6f61c@group.calendar.google.com', color: 'DC2626' },
+        { id: 'y1b', name: 'WEP/Y1-B', room: 'B23', calendarId: 'c_2e32feb66be240456f961cc2f43c0bbef9c5ff6cbb68abdea333adf1739f9833@group.calendar.google.com', color: '7C3AED' },
+        { id: 'y1c', name: 'WEP/Y1-C', room: 'B31', calendarId: 'c_4f19b4ea9a24523bb7910e4d19bb0f426abdfc3e2b67850a4d5770e4755674db@group.calendar.google.com', color: 'DB2777' },
+        { id: 'y1d', name: 'SNA/Y1', room: 'A21', calendarId: 'c_60360764ac056113deb843d3bc1a8dd6e66a0bbddcf4dbd1ff4ea3453417dc3e@group.calendar.google.com', color: '0891B2' }
     ];
 
     // Date Management
