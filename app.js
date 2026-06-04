@@ -1197,11 +1197,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}${ctx.dataset.label === 'Hours' ? 'h' : ''}`
+                            label: ctx => ctx.parsed != null ? `${ctx.dataset.label}: ${ctx.parsed.y}${ctx.dataset.label === 'Hours' ? 'h' : ''}` : ''
                         }
                     },
                     datalabels: {
-                        display: ctx => ctx.parsed.y > 0,
+                        display: ctx => ctx.parsed != null && ctx.parsed.y > 0,
                         anchor: 'end',
                         align: 'end',
                         offset: 2,
