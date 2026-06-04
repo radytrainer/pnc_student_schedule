@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pnc-schedule-v4';
+const CACHE_NAME = 'pnc-schedule-v5';
 const urlsToCache = [
   './',
   './index.html',

@@ -748,6 +748,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const ov = document.getElementById('dashboard-overlay');
             if (ov) { ov.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
             if (analyticsApp) analyticsApp.logEvent('dashboard_opened');
+            // Auto-load data immediately using the current month values
+            loadDashboardData(false);
         });
     }
 
@@ -876,9 +878,26 @@ document.addEventListener('DOMContentLoaded', function () {
         renderDashboard(currentDashboardData, roleFilter, fromVal, toVal, fromCache);
     }
 
+    // Tracks leave calendar state for display in the dashboard
+    let _leaveCalTotal = 0;
+    let _leaveCalOk    = true;
+
     // ── Fetch all trainer workload from Google Calendar ──
     async function fetchAllTrainerData(fromDate, toDate) {
-        const leaveEvents = await fetchEventsInRange(LEAVE_CALENDAR_ID, fromDate, toDate);
+        // Fetch leave calendar (all events — we'll match per trainer below)
+        const leaveResult  = await fetchEventsInRangeDebug(LEAVE_CALENDAR_ID, fromDate, toDate);
+        const leaveEvents  = leaveResult.items;
+        _leaveCalOk        = leaveResult.ok;
+        _leaveCalTotal     = leaveEvents.length;
+
+        console.log(`[Leave Calendar] ${_leaveCalTotal} events · accessible: ${_leaveCalOk}`);
+        if (leaveEvents.length) {
+            console.table(leaveEvents.map(e => ({
+                summary:   e.summary,
+                date:      e.start.date || e.start.dateTime,
+                organizer: e.organizer?.displayName || e.organizer?.email
+            })));
+        }
 
         const results = await Promise.all(teachers.map(async (trainer) => {
             const events   = await fetchEventsInRange(trainer.calendarId, fromDate, toDate);
@@ -898,6 +917,24 @@ document.addEventListener('DOMContentLoaded', function () {
         return results;
     }
 
+    // Fetch with error tracking (used for leave calendar)
+    async function fetchEventsInRangeDebug(calendarId, fromDate, toDate) {
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+            `key=${GOOGLE_API_KEY}&timeMin=${fromDate.toISOString()}&timeMax=${toDate.toISOString()}` +
+            `&singleEvents=true&maxResults=500&orderBy=startTime&timeZone=Asia/Phnom_Penh`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) {
+                console.warn(`[Leave Calendar] HTTP ${res.status} — make sure the calendar is set to PUBLIC in Google Calendar settings.`);
+                return { items: [], ok: false };
+            }
+            return { items: (await res.json()).items || [], ok: true };
+        } catch (e) {
+            console.warn('[Leave Calendar] Fetch error:', e);
+            return { items: [], ok: false };
+        }
+    }
+
     async function fetchEventsInRange(calendarId, fromDate, toDate) {
         const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
             `key=${GOOGLE_API_KEY}&timeMin=${fromDate.toISOString()}&timeMax=${toDate.toISOString()}` +
@@ -909,17 +946,38 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch { return []; }
     }
 
-    // Leave events must include the trainer's first name in the title or description
+    // Match a leave event to a trainer by searching across ALL event fields.
+    // Checks: summary, description, organizer name/email, creator name/email, attendees.
+    // Uses the trainer's first name for broader matching.
     function countLeaveDays(trainerName, leaveEvents) {
-        const name = trainerName.toLowerCase();
+        const firstName = trainerName.toLowerCase().trim().split(/\s+/)[0];
+
         return leaveEvents.reduce((total, ev) => {
-            const summary = (ev.summary || '').toLowerCase();
-            const desc    = (ev.description || '').toLowerCase();
-            if (!summary.includes(name) && !desc.includes(name)) return total;
-            if (ev.start.date && ev.end.date) {
+            // Build one string from every meaningful field
+            const fields = [
+                ev.summary        || '',
+                ev.description    || '',
+                (ev.organizer || {}).displayName || '',
+                (ev.organizer || {}).email        || '',
+                (ev.creator   || {}).displayName || '',
+                (ev.creator   || {}).email        || '',
+            ];
+            if (Array.isArray(ev.attendees)) {
+                ev.attendees.forEach(a => {
+                    fields.push(a.displayName || '');
+                    fields.push(a.email       || '');
+                });
+            }
+            const combined = fields.join(' ').toLowerCase();
+
+            if (!combined.includes(firstName)) return total;
+
+            // All-day event: Google sets end.date to the day AFTER the last day
+            if (ev.start && ev.start.date && ev.end && ev.end.date) {
                 const days = Math.round((new Date(ev.end.date) - new Date(ev.start.date)) / 86400000);
                 return total + Math.max(1, days);
             }
+            // Timed event counts as 1 leave day
             return total + 1;
         }, 0);
     }
@@ -978,12 +1036,19 @@ document.addEventListener('DOMContentLoaded', function () {
             ? (fromCache ? 'From shared cache' : 'Saved to Firebase')
             : 'No Firebase';
 
+        const leaveStatusHtml = !_leaveCalOk
+            ? `<span style="color:#EF4444;font-weight:700"><i class="fas fa-exclamation-triangle"></i> Leave calendar not accessible — set it to <em>Public</em> in Google Calendar settings</span>`
+            : `<span><i class="fas fa-calendar-minus" style="color:#DC2626;margin-right:4px"></i>Leave calendar: <strong>${_leaveCalTotal} event${_leaveCalTotal !== 1 ? 's' : ''}</strong> found in period</span>`;
+
         body.innerHTML = `
             <div class="dash-cache-info">
                 <span><i class="fas fa-database" style="margin-right:6px;color:var(--primary-color)"></i>
                     <strong>${cacheLabel}</strong> &bull; Period: ${fromMonth} → ${toMonth} &bull; ~${weeks} week${weeks !== 1 ? 's' : ''}
                 </span>
                 <span style="color:#C8CDD8;font-size:11px">Generated ${new Date().toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+            </div>
+            <div class="dash-cache-info" style="background:#FFF9F0;border-color:#FDBA74">
+                ${leaveStatusHtml}
             </div>
 
             <div class="dash-stats-row">
@@ -1093,6 +1158,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!canvas || typeof Chart === 'undefined') return;
         if (workloadChart) { workloadChart.destroy(); workloadChart = null; }
 
+        // Register datalabels plugin (safe to call multiple times)
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+
         workloadChart = new Chart(canvas, {
             type: 'bar',
             data: {
@@ -1109,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     {
                         label: 'Hours',
                         data: data.map(t => t.hours),
-                        backgroundColor: data.map(t => `#${t.color}88`),
+                        backgroundColor: data.map(t => `#${t.color}66`),
                         borderRadius: 6,
                         barPercentage: 0.5,
                         categoryPercentage: 0.75
@@ -1119,6 +1189,7 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                layout: { padding: { top: 22 } },
                 plugins: {
                     legend: {
                         position: 'top',
@@ -1128,11 +1199,38 @@ document.addEventListener('DOMContentLoaded', function () {
                         callbacks: {
                             label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}${ctx.dataset.label === 'Hours' ? 'h' : ''}`
                         }
+                    },
+                    datalabels: {
+                        display: ctx => ctx.parsed.y > 0,
+                        anchor: 'end',
+                        align: 'end',
+                        offset: 2,
+                        font: { size: 10, weight: '700', family: 'Inter' },
+                        color: ctx => {
+                            const hex = data[ctx.dataIndex]?.color || '555555';
+                            return `#${hex}`;
+                        },
+                        formatter: (value, ctx) => {
+                            if (!value) return null;
+                            return ctx.dataset.label === 'Hours' ? `${value}h` : `${value}`;
+                        },
+                        // Small rounded badge background
+                        backgroundColor: ctx => {
+                            const hex = data[ctx.dataIndex]?.color || '555555';
+                            return `#${hex}18`;
+                        },
+                        borderRadius: 4,
+                        padding: { top: 2, bottom: 2, left: 5, right: 5 }
                     }
                 },
                 scales: {
                     x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
-                    y: { grid: { color: '#F3F4F6' }, ticks: { font: { family: 'Inter', size: 12 } }, beginAtZero: true }
+                    y: {
+                        grid: { color: '#F3F4F6' },
+                        ticks: { font: { family: 'Inter', size: 12 } },
+                        beginAtZero: true,
+                        grace: '20%'
+                    }
                 }
             }
         });
