@@ -1036,19 +1036,12 @@ document.addEventListener('DOMContentLoaded', function () {
             ? (fromCache ? 'From shared cache' : 'Saved to Firebase')
             : 'No Firebase';
 
-        const leaveStatusHtml = !_leaveCalOk
-            ? `<span style="color:#EF4444;font-weight:700"><i class="fas fa-exclamation-triangle"></i> Leave calendar not accessible — set it to <em>Public</em> in Google Calendar settings</span>`
-            : `<span><i class="fas fa-calendar-minus" style="color:#DC2626;margin-right:4px"></i>Leave calendar: <strong>${_leaveCalTotal} event${_leaveCalTotal !== 1 ? 's' : ''}</strong> found in period</span>`;
-
         body.innerHTML = `
             <div class="dash-cache-info">
                 <span><i class="fas fa-database" style="margin-right:6px;color:var(--primary-color)"></i>
                     <strong>${cacheLabel}</strong> &bull; Period: ${fromMonth} → ${toMonth} &bull; ~${weeks} week${weeks !== 1 ? 's' : ''}
                 </span>
                 <span style="color:#C8CDD8;font-size:11px">Generated ${new Date().toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
-            </div>
-            <div class="dash-cache-info" style="background:#FFF9F0;border-color:#FDBA74">
-                ${leaveStatusHtml}
             </div>
 
             <div class="dash-stats-row">
@@ -1064,8 +1057,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <div class="stat-card">
                     <div class="stat-card__label">Leave Days</div>
-                    <div class="stat-card__value">${totalLeave}</div>
-                    <div class="stat-card__sub">across trainers</div>
+                    <div class="stat-card__value">${_leaveCalTotal}</div>
+                    <div class="stat-card__sub">${_leaveCalOk ? 'from leave calendar' : 'calendar not accessible'}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-card__label">Active Trainers</div>
@@ -1091,7 +1084,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <th>Role</th>
                                 <th>Sessions</th>
                                 <th>Hours</th>
-                                <th>Leave Days</th>
                                 <th>Avg Hrs/Week</th>
                             </tr>
                         </thead>
@@ -1137,9 +1129,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </td>
                 <td class="hours-cell">${t.hours}h</td>
-                <td>${t.leaveDays > 0
-                    ? `<span class="leave-tag"><i class="fas fa-calendar-minus"></i> ${t.leaveDays}d</span>`
-                    : '<span class="no-leave">—</span>'}</td>
                 <td class="${over ? 'overload-cell' : 'avg-cell'}">
                     ${avg}h/wk ${over ? '<i class="fas fa-exclamation-triangle" title="Exceeds 22.5h/wk limit"></i>' : ''}
                 </td>
