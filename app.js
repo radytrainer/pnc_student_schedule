@@ -1,3 +1,30 @@
+// ═══════════════════════════════════════════════════════════
+// FIREBASE CONFIGURATION
+// 1. Go to https://console.firebase.google.com
+// 2. Create a project → Add web app → copy config below
+// 3. In Firestore Database → Rules, set:
+//    allow read, write: if true;   (for shared access)
+// Leave empty strings to run without Firebase (data won't be cached/shared)
+// ═══════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: ""
+};
+
+let firestoreDb = null;
+(function initFirebase() {
+    try {
+        if (typeof firebase !== 'undefined' && FIREBASE_CONFIG.projectId) {
+            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+            firestoreDb = firebase.firestore();
+        }
+    } catch (e) { /* Firebase not configured */ }
+})();
+
 document.addEventListener('DOMContentLoaded', function () {
     const iframeEl = document.getElementById('google-calendar-iframe');
     const teacherFiltersEl = document.getElementById('teacher-filters');
@@ -652,6 +679,373 @@ document.addEventListener('DOMContentLoaded', function () {
             container.appendChild(flake);
         }
     }
+    // ═══════════════════════════════════════════════════════════
+    // DASHBOARD
+    // ═══════════════════════════════════════════════════════════
+    const LEAVE_CALENDAR_ID = 'c_h8kqjtec9eis7v5kqp6e44uo4s@group.calendar.google.com';
+    let workloadChart = null;
+    let currentDashboardData = null;
+
+    // Set default month picker values to current month
+    (function setDashDefaultDates() {
+        const now = new Date();
+        const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const f = document.getElementById('dash-from-month');
+        const t = document.getElementById('dash-to-month');
+        if (f) f.value = ym;
+        if (t) t.value = ym;
+    })();
+
+    // Open / Close
+    const openDashBtn = document.getElementById('open-dashboard-btn');
+    if (openDashBtn) {
+        openDashBtn.addEventListener('click', () => {
+            const ov = document.getElementById('dashboard-overlay');
+            if (ov) { ov.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        });
+    }
+
+    function closeDashboard() {
+        const ov = document.getElementById('dashboard-overlay');
+        if (ov) { ov.style.display = 'none'; document.body.style.overflow = ''; }
+    }
+
+    const closeDashBtn = document.getElementById('close-dashboard-btn');
+    if (closeDashBtn) closeDashBtn.addEventListener('click', closeDashboard);
+
+    const dashOverlay = document.getElementById('dashboard-overlay');
+    if (dashOverlay) {
+        dashOverlay.addEventListener('click', (e) => { if (e.target === dashOverlay) closeDashboard(); });
+    }
+
+    // Print
+    const printReportBtn = document.getElementById('print-report-btn');
+    if (printReportBtn) {
+        printReportBtn.addEventListener('click', () => {
+            if (!currentDashboardData) { alert('Please load data first before printing.'); return; }
+            window.print();
+        });
+    }
+
+    // Load data
+    const loadDashBtn = document.getElementById('load-dashboard-btn');
+    if (loadDashBtn) loadDashBtn.addEventListener('click', loadDashboardData);
+
+    // Role filter re-renders without re-fetching
+    const dashRoleFilter = document.getElementById('dash-role-filter');
+    if (dashRoleFilter) {
+        dashRoleFilter.addEventListener('change', () => {
+            if (currentDashboardData) renderDashboardView();
+        });
+    }
+
+    async function loadDashboardData() {
+        const fromVal = document.getElementById('dash-from-month').value;
+        let toVal   = document.getElementById('dash-to-month').value;
+        if (!fromVal || !toVal) { alert('Please select both From and To months.'); return; }
+
+        // Auto-correct: from must be ≤ to
+        if (fromVal > toVal) {
+            toVal = fromVal;
+            document.getElementById('dash-to-month').value = fromVal;
+        }
+
+        const fromDate = new Date(`${fromVal}-01T00:00:00`);
+        const toBase   = new Date(`${toVal}-01T00:00:00`);
+        const toDate   = new Date(toBase.getFullYear(), toBase.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        // Show loading state
+        const body = document.getElementById('dashboard-body');
+        if (body) {
+            body.innerHTML = `
+                <div class="dashboard-placeholder">
+                    <i class="fas fa-spinner fa-spin" style="color:var(--primary-color);opacity:1"></i>
+                    <p>Fetching data from Google Calendar… This may take a moment.</p>
+                </div>`;
+        }
+
+        const cacheKey = `${fromVal}_${toVal}`;
+        let data = await loadFromFirestore(cacheKey);
+        let fromCache = !!data;
+
+        if (!data) {
+            data = await fetchAllTrainerData(fromDate, toDate);
+            await saveToFirestore(cacheKey, data);
+        }
+
+        currentDashboardData = data;
+        renderDashboardView(fromCache);
+    }
+
+    function renderDashboardView(fromCache) {
+        const roleFilter = document.getElementById('dash-role-filter').value;
+        const fromVal    = document.getElementById('dash-from-month').value;
+        const toVal      = document.getElementById('dash-to-month').value;
+        renderDashboard(currentDashboardData, roleFilter, fromVal, toVal, fromCache);
+    }
+
+    // ── Fetch all trainer workload data ──
+    async function fetchAllTrainerData(fromDate, toDate) {
+        // Fetch leave calendar events once
+        const leaveEvents = await fetchEventsInRange(LEAVE_CALENDAR_ID, fromDate, toDate);
+
+        const results = await Promise.all(teachers.map(async (trainer) => {
+            const events = await fetchEventsInRange(trainer.calendarId, fromDate, toDate);
+            const timed  = events.filter(ev => ev.start && ev.start.dateTime);
+            const sessions = timed.length;
+            const hours = timed.reduce((sum, ev) => {
+                if (ev.end && ev.end.dateTime) {
+                    return sum + (new Date(ev.end.dateTime) - new Date(ev.start.dateTime)) / 3600000;
+                }
+                return sum + 1.5;
+            }, 0);
+            const leaveDays = countLeaveDays(trainer.name, leaveEvents);
+
+            return {
+                id: trainer.id,
+                name: trainer.name,
+                role: trainer.role,
+                color: trainer.color,
+                sessions,
+                hours: Math.round(hours * 10) / 10,
+                leaveDays
+            };
+        }));
+
+        return results;
+    }
+
+    async function fetchEventsInRange(calendarId, fromDate, toDate) {
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+            `key=${GOOGLE_API_KEY}` +
+            `&timeMin=${fromDate.toISOString()}` +
+            `&timeMax=${toDate.toISOString()}` +
+            `&singleEvents=true&maxResults=500&orderBy=startTime&timeZone=Asia/Phnom_Penh`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) return [];
+            return (await res.json()).items || [];
+        } catch { return []; }
+    }
+
+    // Match leave events to a trainer by searching their name in the event title/description.
+    // Leave events must include the trainer's first name somewhere in the title.
+    function countLeaveDays(trainerName, leaveEvents) {
+        const nameLower = trainerName.toLowerCase();
+        return leaveEvents.reduce((total, ev) => {
+            const summary = (ev.summary || '').toLowerCase();
+            const desc    = (ev.description || '').toLowerCase();
+            if (!summary.includes(nameLower) && !desc.includes(nameLower)) return total;
+
+            if (ev.start.date && ev.end.date) {
+                const days = Math.round((new Date(ev.end.date) - new Date(ev.start.date)) / 86400000);
+                return total + Math.max(1, days);
+            }
+            return total + 1;
+        }, 0);
+    }
+
+    // ── Firebase Firestore cache ──
+    async function saveToFirestore(key, data) {
+        if (!firestoreDb) return;
+        try {
+            await firestoreDb.collection('dashboard_cache').doc(key).set({
+                data,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) { console.warn('Firestore write:', e); }
+    }
+
+    async function loadFromFirestore(key) {
+        if (!firestoreDb) return null;
+        try {
+            const doc = await firestoreDb.collection('dashboard_cache').doc(key).get();
+            if (!doc.exists) return null;
+            const d = doc.data();
+            // Expire cache after 1 hour
+            if (d.updatedAt && (Date.now() - d.updatedAt.toMillis() > 3600000)) return null;
+            return d.data || null;
+        } catch { return null; }
+    }
+
+    // ── Render Dashboard ──
+    function renderDashboard(data, roleFilter, fromMonth, toMonth, fromCache) {
+        const body = document.getElementById('dashboard-body');
+        if (!body) return;
+
+        const filtered = roleFilter === 'all' ? data : data.filter(t => t.role === roleFilter);
+
+        const totalSessions = filtered.reduce((s, t) => s + t.sessions, 0);
+        const totalHours    = Math.round(filtered.reduce((s, t) => s + t.hours, 0) * 10) / 10;
+        const totalLeave    = filtered.reduce((s, t) => s + t.leaveDays, 0);
+        const activeCount   = filtered.filter(t => t.sessions > 0).length;
+        const maxSessions   = Math.max(...filtered.map(t => t.sessions), 1);
+
+        // Calculate number of weeks in range
+        const from  = new Date(`${fromMonth}-01`);
+        const toRaw = new Date(`${toMonth}-01`);
+        const to    = new Date(toRaw.getFullYear(), toRaw.getMonth() + 1, 0);
+        const weeks = Math.max(1, Math.ceil((to - from) / (7 * 24 * 3600 * 1000)));
+
+        // Firebase status indicator
+        const fbStatus = firestoreDb
+            ? (fromCache
+                ? `<span class="firebase-status firebase-status--cache"><i class="fas fa-database"></i> Loaded from shared cache</span>`
+                : `<span class="firebase-status firebase-status--ok"><i class="fas fa-cloud-upload-alt"></i> Saved to Firebase</span>`)
+            : `<span class="firebase-status firebase-status--off"><i class="fas fa-database"></i> Firebase not configured</span>`;
+
+        body.innerHTML = `
+            <div class="dash-stats-row">
+                <div class="stat-card stat-card--primary">
+                    <div class="stat-card__label">Total Sessions</div>
+                    <div class="stat-card__value">${totalSessions}</div>
+                    <div class="stat-card__sub">${roleFilter === 'all' ? 'All trainers' : roleFilter}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card__label">Teaching Hours</div>
+                    <div class="stat-card__value">${totalHours}</div>
+                    <div class="stat-card__sub">hours in period</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card__label">Leave Days</div>
+                    <div class="stat-card__value">${totalLeave}</div>
+                    <div class="stat-card__sub">across trainers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card__label">Active Trainers</div>
+                    <div class="stat-card__value">${activeCount}</div>
+                    <div class="stat-card__sub">with sessions</div>
+                </div>
+            </div>
+
+            <div class="dash-chart-card">
+                <div class="dash-card-title" style="justify-content:space-between">
+                    <span><i class="fas fa-chart-bar"></i> Sessions &amp; Hours by Trainer</span>
+                    ${fbStatus}
+                </div>
+                <canvas id="workload-chart"></canvas>
+            </div>
+
+            <div class="dash-table-card">
+                <div class="dash-card-title"><i class="fas fa-table"></i> Detailed Workload Breakdown</div>
+                <div class="table-scroll-wrap">
+                    <table class="workload-table">
+                        <thead>
+                            <tr>
+                                <th>Trainer</th>
+                                <th>Role</th>
+                                <th>Sessions</th>
+                                <th>Hours</th>
+                                <th>Leave Days</th>
+                                <th>Avg Hrs/Week</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workload-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dash-report-footer">
+                Period: <strong>${fromMonth}</strong> → <strong>${toMonth}</strong> &bull;
+                Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+        `;
+
+        renderWorkloadChart(filtered);
+
+        const ROLE_COLORS = {
+            'IT Trainer':      { bg: '#EEF2FF', fg: '#5C5CEE' },
+            'IT Coor':         { bg: '#FEF3C7', fg: '#D97706' },
+            'ENG/PL Trainer':  { bg: '#ECFDF5', fg: '#059669' },
+            'ENG/PL Coor':     { bg: '#FFF7ED', fg: '#F97316' },
+            'English Trainer': { bg: '#F0FDF4', fg: '#16A34A' },
+            'PL Trainer':      { bg: '#F5F3FF', fg: '#8B5CF6' }
+        };
+
+        const tbody = document.getElementById('workload-tbody');
+        filtered.forEach(t => {
+            const rc  = ROLE_COLORS[t.role] || { bg: '#F3F4F6', fg: '#6B7280' };
+            const avg = Math.round((t.hours / weeks) * 10) / 10;
+            const bar = maxSessions > 0 ? Math.round((t.sessions / maxSessions) * 100) : 0;
+            const overload = avg > 22.5;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><div class="trainer-name-cell">
+                    <span class="trainer-dot" style="background:#${t.color}"></span>${t.name}
+                </div></td>
+                <td><span class="role-tag" style="background:${rc.bg};color:${rc.fg}">${t.role}</span></td>
+                <td>
+                    <div class="sessions-bar-cell">
+                        <span class="sessions-num">${t.sessions}</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width:${bar}%;background:#${t.color}"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="hours-cell">${t.hours}h</td>
+                <td>${t.leaveDays > 0
+                    ? `<span class="leave-tag"><i class="fas fa-calendar-minus"></i> ${t.leaveDays}d</span>`
+                    : '<span class="no-leave">—</span>'}</td>
+                <td class="${overload ? 'overload-cell' : 'avg-cell'}">
+                    ${avg}h/wk ${overload ? '<i class="fas fa-exclamation-triangle" title="Exceeds 22.5h/wk limit"></i>' : ''}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderWorkloadChart(data) {
+        const canvas = document.getElementById('workload-chart');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        if (workloadChart) { workloadChart.destroy(); workloadChart = null; }
+
+        workloadChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: data.map(t => t.name),
+                datasets: [
+                    {
+                        label: 'Sessions',
+                        data: data.map(t => t.sessions),
+                        backgroundColor: data.map(t => `#${t.color}`),
+                        borderRadius: 6,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.75
+                    },
+                    {
+                        label: 'Hours',
+                        data: data.map(t => t.hours),
+                        backgroundColor: data.map(t => `#${t.color}88`),
+                        borderRadius: 6,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.75
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyle: 'circle' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}${ctx.dataset.label === 'Hours' ? 'h' : ''}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
+                    y: { grid: { color: '#F3F4F6' }, ticks: { font: { family: 'Inter', size: 12 } }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
 });
 
 // Register Service Worker for PWA

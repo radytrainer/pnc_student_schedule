@@ -11,6 +11,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase & Chart.js for Dashboard -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
     <link rel="shortcut icon" href="pn-logo.png" type="image/x-icon">
@@ -92,6 +96,13 @@
                     </div>
                 </details>
             </div>
+
+            <!-- Dashboard Button — Desktop Only -->
+            <div class="dashboard-btn-wrapper">
+                <button id="open-dashboard-btn" class="btn btn-primary btn-block dashboard-open-btn">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </button>
+            </div>
         </aside>
 
         <main class="main-content">
@@ -116,6 +127,61 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Dashboard Overlay (Desktop Only) -->
+    <div id="dashboard-overlay" class="dashboard-overlay" style="display:none">
+        <div class="dashboard-panel">
+
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <i class="fas fa-chart-bar"></i>
+                    <h2>Trainer Workload Dashboard</h2>
+                </div>
+                <div class="dashboard-header-actions">
+                    <button id="print-report-btn" class="btn btn-secondary">
+                        <i class="fas fa-print"></i> Print Report
+                    </button>
+                    <button id="close-dashboard-btn" class="dashboard-close-btn" title="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-filters">
+                <div class="filter-field">
+                    <label>From Month</label>
+                    <input type="month" id="dash-from-month">
+                </div>
+                <div class="filter-field">
+                    <label>To Month</label>
+                    <input type="month" id="dash-to-month">
+                </div>
+                <div class="filter-field">
+                    <label>Group / Filter by Role</label>
+                    <select id="dash-role-filter">
+                        <option value="all">All Roles</option>
+                        <option value="IT Trainer">IT Trainer</option>
+                        <option value="IT Coor">IT Coordinator</option>
+                        <option value="ENG/PL Trainer">ENG/PL Trainer</option>
+                        <option value="ENG/PL Coor">ENG/PL Coordinator</option>
+                        <option value="English Trainer">English Trainer</option>
+                        <option value="PL Trainer">PL Trainer</option>
+                    </select>
+                </div>
+                <button id="load-dashboard-btn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Load Data
+                </button>
+            </div>
+
+            <div class="dashboard-body" id="dashboard-body">
+                <div class="dashboard-placeholder">
+                    <i class="fas fa-chart-bar"></i>
+                    <p>Select a date range and click <strong>Load Data</strong> to view trainer workload.</p>
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <script src="app.js"></script>
