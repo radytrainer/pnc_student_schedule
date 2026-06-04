@@ -988,6 +988,8 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             await firestoreDb.collection(DB_COLLECTION).doc(key).set({
                 data,
+                leaveTotal: _leaveCalTotal,   // persist so cache restores correctly
+                leaveCalOk: _leaveCalOk,
                 updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
                 updatedBy:  navigator.userAgent.slice(0, 100),
                 fromMonth:  key.split('_')[0],
@@ -1008,6 +1010,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!doc.exists) return null;
             const d = doc.data();
             if (d.updatedAt && (Date.now() - d.updatedAt.toMillis() > CACHE_TTL_MS)) return null;
+            // Old cache entries don't have leaveTotal — treat as expired to force a fresh fetch
+            if (typeof d.leaveTotal !== 'number') return null;
+            // Restore leave calendar state so the card shows the right number
+            _leaveCalTotal = d.leaveTotal;
+            _leaveCalOk    = d.leaveCalOk !== false;
             return d.data || null;
         } catch (e) {
             console.warn('Firestore read error:', e);
