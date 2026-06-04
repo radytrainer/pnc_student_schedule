@@ -14,6 +14,7 @@
     <!-- Firebase & Chart.js for Dashboard -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
@@ -169,9 +170,18 @@
                         <option value="PL Trainer">PL Trainer</option>
                     </select>
                 </div>
-                <button id="load-dashboard-btn" class="btn btn-primary">
-                    <i class="fas fa-sync-alt"></i> Load Data
-                </button>
+                <div class="dash-filter-actions">
+                    <button id="load-dashboard-btn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Load Data
+                    </button>
+                    <button id="force-refresh-btn" class="btn btn-secondary" title="Bypass cache and re-fetch from Google Calendar" style="display:none">
+                        <i class="fas fa-redo"></i> Force Refresh
+                    </button>
+                </div>
+                <div class="fb-status-badge" id="fb-status-badge">
+                    <span class="fb-dot" id="fb-dot"></span>
+                    <span id="fb-status-text">Firebase</span>
+                </div>
             </div>
 
             <div class="dashboard-body" id="dashboard-body">
@@ -183,6 +193,9 @@
 
         </div>
     </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="app.js"></script>
 </body>

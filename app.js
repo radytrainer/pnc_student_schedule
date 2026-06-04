@@ -1,28 +1,38 @@
 // ═══════════════════════════════════════════════════════════
-// FIREBASE CONFIGURATION
-// 1. Go to https://console.firebase.google.com
-// 2. Create a project → Add web app → copy config below
-// 3. In Firestore Database → Rules, set:
-//    allow read, write: if true;   (for shared access)
-// Leave empty strings to run without Firebase (data won't be cached/shared)
+// FIREBASE — project: timetable-ab826
+// Firestore Rules needed (Firebase Console → Firestore → Rules):
+//
+//   rules_version = '2';
+//   service cloud.firestore {
+//     match /databases/{database}/documents {
+//       match /{document=**} {
+//         allow read, write: if true;
+//       }
+//     }
+//   }
 // ═══════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey:            "AIzaSyDSI32p0geilwDLSzR6J6J30x5iujBHi-Q",
+    authDomain:        "timetable-ab826.firebaseapp.com",
+    projectId:         "timetable-ab826",
+    storageBucket:     "timetable-ab826.firebasestorage.app",
+    messagingSenderId: "805287368412",
+    appId:             "1:805287368412:web:ac7a8e3396bff3ba894619",
+    measurementId:     "G-67BEH4P6QP"
 };
 
-let firestoreDb = null;
+let firestoreDb  = null;
+let analyticsApp = null;
+
 (function initFirebase() {
     try {
-        if (typeof firebase !== 'undefined' && FIREBASE_CONFIG.projectId) {
-            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-            firestoreDb = firebase.firestore();
+        if (typeof firebase === 'undefined') return;
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        firestoreDb = firebase.firestore();
+        if (FIREBASE_CONFIG.measurementId && firebase.analytics) {
+            analyticsApp = firebase.analytics();
         }
-    } catch (e) { /* Firebase not configured */ }
+    } catch (e) { console.warn('Firebase init error:', e); }
 })();
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -680,58 +690,96 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     // ═══════════════════════════════════════════════════════════
-    // DASHBOARD
+    // DASHBOARD — Full Firebase real-time integration
     // ═══════════════════════════════════════════════════════════
     const LEAVE_CALENDAR_ID = 'c_h8kqjtec9eis7v5kqp6e44uo4s@group.calendar.google.com';
-    let workloadChart = null;
-    let currentDashboardData = null;
+    const DB_COLLECTION     = 'dashboard_cache';
+    const CACHE_TTL_MS      = 60 * 60 * 1000; // 1 hour
 
-    // Set default month picker values to current month
+    let workloadChart        = null;
+    let currentDashboardData = null;
+    let currentCacheKey      = null;
+    let firestoreUnsubscribe = null;
+
+    // ── Toast helper ──
+    function showToast(message, type = 'info', duration = 4000) {
+        const icons = { success: 'fa-check-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle' };
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast toast--${type}`;
+        toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('removing');
+            toast.addEventListener('animationend', () => toast.remove());
+        }, duration);
+    }
+
+    // ── Firebase status badge ──
+    function setFbStatus(state, text) {
+        const badge = document.getElementById('fb-status-badge');
+        if (!badge) return;
+        badge.className = `fb-status-badge fb-${state}`;
+        document.getElementById('fb-status-text').textContent = text;
+    }
+
+    // Initialise status
+    if (firestoreDb) {
+        setFbStatus('connected', 'Firebase connected');
+    } else {
+        setFbStatus('offline', 'Firebase offline');
+    }
+
+    // ── Default month picker values ──
     (function setDashDefaultDates() {
         const now = new Date();
         const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const f = document.getElementById('dash-from-month');
-        const t = document.getElementById('dash-to-month');
+        const f  = document.getElementById('dash-from-month');
+        const t  = document.getElementById('dash-to-month');
         if (f) f.value = ym;
         if (t) t.value = ym;
     })();
 
-    // Open / Close
+    // ── Open / Close dashboard ──
     const openDashBtn = document.getElementById('open-dashboard-btn');
     if (openDashBtn) {
         openDashBtn.addEventListener('click', () => {
             const ov = document.getElementById('dashboard-overlay');
             if (ov) { ov.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+            if (analyticsApp) analyticsApp.logEvent('dashboard_opened');
         });
     }
 
     function closeDashboard() {
         const ov = document.getElementById('dashboard-overlay');
         if (ov) { ov.style.display = 'none'; document.body.style.overflow = ''; }
+        // Stop real-time listener when panel is closed
+        if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
     }
 
     const closeDashBtn = document.getElementById('close-dashboard-btn');
     if (closeDashBtn) closeDashBtn.addEventListener('click', closeDashboard);
 
     const dashOverlay = document.getElementById('dashboard-overlay');
-    if (dashOverlay) {
-        dashOverlay.addEventListener('click', (e) => { if (e.target === dashOverlay) closeDashboard(); });
-    }
+    if (dashOverlay) dashOverlay.addEventListener('click', (e) => { if (e.target === dashOverlay) closeDashboard(); });
 
-    // Print
+    // ── Print ──
     const printReportBtn = document.getElementById('print-report-btn');
     if (printReportBtn) {
         printReportBtn.addEventListener('click', () => {
-            if (!currentDashboardData) { alert('Please load data first before printing.'); return; }
+            if (!currentDashboardData) { showToast('Please load data first.', 'warning'); return; }
             window.print();
         });
     }
 
-    // Load data
-    const loadDashBtn = document.getElementById('load-dashboard-btn');
-    if (loadDashBtn) loadDashBtn.addEventListener('click', loadDashboardData);
+    // ── Load / Force-refresh buttons ──
+    const loadDashBtn     = document.getElementById('load-dashboard-btn');
+    const forceRefreshBtn = document.getElementById('force-refresh-btn');
+    if (loadDashBtn)     loadDashBtn.addEventListener('click', () => loadDashboardData(false));
+    if (forceRefreshBtn) forceRefreshBtn.addEventListener('click', () => loadDashboardData(true));
 
-    // Role filter re-renders without re-fetching
+    // ── Role filter (re-render without re-fetch) ──
     const dashRoleFilter = document.getElementById('dash-role-filter');
     if (dashRoleFilter) {
         dashRoleFilter.addEventListener('change', () => {
@@ -739,42 +787,86 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    async function loadDashboardData() {
+    // ── Main data loader ──
+    async function loadDashboardData(forceRefresh = false) {
         const fromVal = document.getElementById('dash-from-month').value;
-        let toVal   = document.getElementById('dash-to-month').value;
-        if (!fromVal || !toVal) { alert('Please select both From and To months.'); return; }
-
-        // Auto-correct: from must be ≤ to
-        if (fromVal > toVal) {
-            toVal = fromVal;
-            document.getElementById('dash-to-month').value = fromVal;
-        }
+        let   toVal   = document.getElementById('dash-to-month').value;
+        if (!fromVal || !toVal) { showToast('Please select From and To months.', 'warning'); return; }
+        if (fromVal > toVal) { toVal = fromVal; document.getElementById('dash-to-month').value = fromVal; }
 
         const fromDate = new Date(`${fromVal}-01T00:00:00`);
         const toBase   = new Date(`${toVal}-01T00:00:00`);
         const toDate   = new Date(toBase.getFullYear(), toBase.getMonth() + 1, 0, 23, 59, 59, 999);
+        const cacheKey = `${fromVal}_${toVal}`;
+        currentCacheKey = cacheKey;
 
-        // Show loading state
+        // Show spinner
         const body = document.getElementById('dashboard-body');
         if (body) {
             body.innerHTML = `
                 <div class="dashboard-placeholder">
-                    <i class="fas fa-spinner fa-spin" style="color:var(--primary-color);opacity:1"></i>
-                    <p>Fetching data from Google Calendar… This may take a moment.</p>
+                    <i class="fas fa-spinner fa-spin" style="color:var(--primary-color);opacity:1;font-size:36px"></i>
+                    <p>${forceRefresh ? 'Force-refreshing from Google Calendar…' : 'Loading data…'}</p>
                 </div>`;
         }
 
-        const cacheKey = `${fromVal}_${toVal}`;
-        let data = await loadFromFirestore(cacheKey);
-        let fromCache = !!data;
+        setFbStatus('connected', 'Loading…');
+
+        // Stop any previous real-time listener
+        if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
+
+        let data      = null;
+        let fromCache = false;
+
+        if (!forceRefresh) {
+            data = await loadFromFirestore(cacheKey);
+            fromCache = !!data;
+        }
 
         if (!data) {
+            // Fetch fresh from Google Calendar
+            setFbStatus('connected', 'Fetching from Calendar…');
             data = await fetchAllTrainerData(fromDate, toDate);
             await saveToFirestore(cacheKey, data);
+            showToast('Data fetched and saved to Firebase.', 'success');
+            if (analyticsApp) analyticsApp.logEvent('dashboard_data_fetched', { from: fromVal, to: toVal });
+        } else {
+            showToast('Loaded from shared Firebase cache.', 'info');
         }
 
         currentDashboardData = data;
         renderDashboardView(fromCache);
+
+        // Show Force Refresh button after first load
+        if (forceRefreshBtn) forceRefreshBtn.style.display = 'inline-flex';
+
+        // Start real-time listener so other users' refreshes update this view
+        subscribeToLiveUpdates(cacheKey);
+    }
+
+    // ── Firestore real-time listener ──
+    function subscribeToLiveUpdates(cacheKey) {
+        if (!firestoreDb) return;
+        setFbStatus('live', 'Live sync active');
+
+        firestoreUnsubscribe = firestoreDb.collection(DB_COLLECTION).doc(cacheKey)
+            .onSnapshot((doc) => {
+                if (!doc.exists) return;
+                const d = doc.data();
+                if (!d || !d.data) return;
+
+                const newDataStr = JSON.stringify(d.data);
+                const curDataStr = JSON.stringify(currentDashboardData);
+
+                if (newDataStr !== curDataStr) {
+                    currentDashboardData = d.data;
+                    renderDashboardView(true);
+                    showToast('Dashboard updated with fresh data from another user.', 'info');
+                }
+            }, (err) => {
+                console.warn('Firestore snapshot error:', err);
+                setFbStatus('error', 'Sync error');
+            });
     }
 
     function renderDashboardView(fromCache) {
@@ -784,32 +876,23 @@ document.addEventListener('DOMContentLoaded', function () {
         renderDashboard(currentDashboardData, roleFilter, fromVal, toVal, fromCache);
     }
 
-    // ── Fetch all trainer workload data ──
+    // ── Fetch all trainer workload from Google Calendar ──
     async function fetchAllTrainerData(fromDate, toDate) {
-        // Fetch leave calendar events once
         const leaveEvents = await fetchEventsInRange(LEAVE_CALENDAR_ID, fromDate, toDate);
 
         const results = await Promise.all(teachers.map(async (trainer) => {
-            const events = await fetchEventsInRange(trainer.calendarId, fromDate, toDate);
-            const timed  = events.filter(ev => ev.start && ev.start.dateTime);
+            const events   = await fetchEventsInRange(trainer.calendarId, fromDate, toDate);
+            const timed    = events.filter(ev => ev.start && ev.start.dateTime);
             const sessions = timed.length;
-            const hours = timed.reduce((sum, ev) => {
+            const hours    = timed.reduce((sum, ev) => {
                 if (ev.end && ev.end.dateTime) {
                     return sum + (new Date(ev.end.dateTime) - new Date(ev.start.dateTime)) / 3600000;
                 }
                 return sum + 1.5;
             }, 0);
             const leaveDays = countLeaveDays(trainer.name, leaveEvents);
-
-            return {
-                id: trainer.id,
-                name: trainer.name,
-                role: trainer.role,
-                color: trainer.color,
-                sessions,
-                hours: Math.round(hours * 10) / 10,
-                leaveDays
-            };
+            return { id: trainer.id, name: trainer.name, role: trainer.role, color: trainer.color,
+                     sessions, hours: Math.round(hours * 10) / 10, leaveDays };
         }));
 
         return results;
@@ -817,9 +900,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function fetchEventsInRange(calendarId, fromDate, toDate) {
         const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
-            `key=${GOOGLE_API_KEY}` +
-            `&timeMin=${fromDate.toISOString()}` +
-            `&timeMax=${toDate.toISOString()}` +
+            `key=${GOOGLE_API_KEY}&timeMin=${fromDate.toISOString()}&timeMax=${toDate.toISOString()}` +
             `&singleEvents=true&maxResults=500&orderBy=startTime&timeZone=Asia/Phnom_Penh`;
         try {
             const res = await fetch(url);
@@ -828,15 +909,13 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch { return []; }
     }
 
-    // Match leave events to a trainer by searching their name in the event title/description.
-    // Leave events must include the trainer's first name somewhere in the title.
+    // Leave events must include the trainer's first name in the title or description
     function countLeaveDays(trainerName, leaveEvents) {
-        const nameLower = trainerName.toLowerCase();
+        const name = trainerName.toLowerCase();
         return leaveEvents.reduce((total, ev) => {
             const summary = (ev.summary || '').toLowerCase();
             const desc    = (ev.description || '').toLowerCase();
-            if (!summary.includes(nameLower) && !desc.includes(nameLower)) return total;
-
+            if (!summary.includes(name) && !desc.includes(name)) return total;
             if (ev.start.date && ev.end.date) {
                 const days = Math.round((new Date(ev.end.date) - new Date(ev.start.date)) / 86400000);
                 return total + Math.max(1, days);
@@ -845,27 +924,37 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 0);
     }
 
-    // ── Firebase Firestore cache ──
+    // ── Firebase Firestore read/write ──
     async function saveToFirestore(key, data) {
         if (!firestoreDb) return;
         try {
-            await firestoreDb.collection('dashboard_cache').doc(key).set({
+            await firestoreDb.collection(DB_COLLECTION).doc(key).set({
                 data,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy:  navigator.userAgent.slice(0, 100),
+                fromMonth:  key.split('_')[0],
+                toMonth:    key.split('_')[1]
             });
-        } catch (e) { console.warn('Firestore write:', e); }
+            setFbStatus('live', 'Saved & syncing');
+        } catch (e) {
+            console.warn('Firestore write error:', e);
+            setFbStatus('error', 'Write failed');
+            showToast('Could not save to Firebase. Check Firestore rules.', 'error');
+        }
     }
 
     async function loadFromFirestore(key) {
         if (!firestoreDb) return null;
         try {
-            const doc = await firestoreDb.collection('dashboard_cache').doc(key).get();
+            const doc = await firestoreDb.collection(DB_COLLECTION).doc(key).get();
             if (!doc.exists) return null;
             const d = doc.data();
-            // Expire cache after 1 hour
-            if (d.updatedAt && (Date.now() - d.updatedAt.toMillis() > 3600000)) return null;
+            if (d.updatedAt && (Date.now() - d.updatedAt.toMillis() > CACHE_TTL_MS)) return null;
             return d.data || null;
-        } catch { return null; }
+        } catch (e) {
+            console.warn('Firestore read error:', e);
+            return null;
+        }
     }
 
     // ── Render Dashboard ──
@@ -873,28 +962,30 @@ document.addEventListener('DOMContentLoaded', function () {
         const body = document.getElementById('dashboard-body');
         if (!body) return;
 
-        const filtered = roleFilter === 'all' ? data : data.filter(t => t.role === roleFilter);
-
+        const filtered      = roleFilter === 'all' ? data : data.filter(t => t.role === roleFilter);
         const totalSessions = filtered.reduce((s, t) => s + t.sessions, 0);
         const totalHours    = Math.round(filtered.reduce((s, t) => s + t.hours, 0) * 10) / 10;
         const totalLeave    = filtered.reduce((s, t) => s + t.leaveDays, 0);
         const activeCount   = filtered.filter(t => t.sessions > 0).length;
         const maxSessions   = Math.max(...filtered.map(t => t.sessions), 1);
 
-        // Calculate number of weeks in range
         const from  = new Date(`${fromMonth}-01`);
         const toRaw = new Date(`${toMonth}-01`);
         const to    = new Date(toRaw.getFullYear(), toRaw.getMonth() + 1, 0);
         const weeks = Math.max(1, Math.ceil((to - from) / (7 * 24 * 3600 * 1000)));
 
-        // Firebase status indicator
-        const fbStatus = firestoreDb
-            ? (fromCache
-                ? `<span class="firebase-status firebase-status--cache"><i class="fas fa-database"></i> Loaded from shared cache</span>`
-                : `<span class="firebase-status firebase-status--ok"><i class="fas fa-cloud-upload-alt"></i> Saved to Firebase</span>`)
-            : `<span class="firebase-status firebase-status--off"><i class="fas fa-database"></i> Firebase not configured</span>`;
+        const cacheLabel = firestoreDb
+            ? (fromCache ? 'From shared cache' : 'Saved to Firebase')
+            : 'No Firebase';
 
         body.innerHTML = `
+            <div class="dash-cache-info">
+                <span><i class="fas fa-database" style="margin-right:6px;color:var(--primary-color)"></i>
+                    <strong>${cacheLabel}</strong> &bull; Period: ${fromMonth} → ${toMonth} &bull; ~${weeks} week${weeks !== 1 ? 's' : ''}
+                </span>
+                <span style="color:#C8CDD8;font-size:11px">Generated ${new Date().toLocaleString('en-US', {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+            </div>
+
             <div class="dash-stats-row">
                 <div class="stat-card stat-card--primary">
                     <div class="stat-card__label">Total Sessions</div>
@@ -919,9 +1010,8 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
 
             <div class="dash-chart-card">
-                <div class="dash-card-title" style="justify-content:space-between">
-                    <span><i class="fas fa-chart-bar"></i> Sessions &amp; Hours by Trainer</span>
-                    ${fbStatus}
+                <div class="dash-card-title">
+                    <i class="fas fa-chart-bar"></i> Sessions &amp; Hours by Trainer
                 </div>
                 <canvas id="workload-chart"></canvas>
             </div>
@@ -947,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             <div class="dash-report-footer">
                 Period: <strong>${fromMonth}</strong> → <strong>${toMonth}</strong> &bull;
-                Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                Report generated: ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}
             </div>
         `;
 
@@ -964,10 +1054,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const tbody = document.getElementById('workload-tbody');
         filtered.forEach(t => {
-            const rc  = ROLE_COLORS[t.role] || { bg: '#F3F4F6', fg: '#6B7280' };
-            const avg = Math.round((t.hours / weeks) * 10) / 10;
-            const bar = maxSessions > 0 ? Math.round((t.sessions / maxSessions) * 100) : 0;
-            const overload = avg > 22.5;
+            const rc      = ROLE_COLORS[t.role] || { bg: '#F3F4F6', fg: '#6B7280' };
+            const avg     = Math.round((t.hours / weeks) * 10) / 10;
+            const bar     = maxSessions > 0 ? Math.round((t.sessions / maxSessions) * 100) : 0;
+            const over    = avg > 22.5;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -978,27 +1068,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>
                     <div class="sessions-bar-cell">
                         <span class="sessions-num">${t.sessions}</span>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width:${bar}%;background:#${t.color}"></div>
-                        </div>
+                        <div class="bar-track"><div class="bar-fill" style="width:${bar}%;background:#${t.color}"></div></div>
                     </div>
                 </td>
                 <td class="hours-cell">${t.hours}h</td>
                 <td>${t.leaveDays > 0
                     ? `<span class="leave-tag"><i class="fas fa-calendar-minus"></i> ${t.leaveDays}d</span>`
                     : '<span class="no-leave">—</span>'}</td>
-                <td class="${overload ? 'overload-cell' : 'avg-cell'}">
-                    ${avg}h/wk ${overload ? '<i class="fas fa-exclamation-triangle" title="Exceeds 22.5h/wk limit"></i>' : ''}
+                <td class="${over ? 'overload-cell' : 'avg-cell'}">
+                    ${avg}h/wk ${over ? '<i class="fas fa-exclamation-triangle" title="Exceeds 22.5h/wk limit"></i>' : ''}
                 </td>
             `;
             tbody.appendChild(tr);
         });
+
+        // Update Firebase badge after render
+        if (firestoreDb) {
+            setFbStatus('live', fromCache ? 'Cache loaded · Live sync' : 'Saved · Live sync');
+        }
     }
 
     function renderWorkloadChart(data) {
         const canvas = document.getElementById('workload-chart');
         if (!canvas || typeof Chart === 'undefined') return;
-
         if (workloadChart) { workloadChart.destroy(); workloadChart = null; }
 
         workloadChart = new Chart(canvas, {
