@@ -1158,13 +1158,52 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!canvas || typeof Chart === 'undefined') return;
         if (workloadChart) { workloadChart.destroy(); workloadChart = null; }
 
-        // Register datalabels plugin (safe to call multiple times)
-        if (typeof ChartDataLabels !== 'undefined') {
-            Chart.register(ChartDataLabels);
-        }
+        // Inline plugin — draws value labels above each bar after the chart is fully drawn.
+        // Uses afterDatasetsDraw so all bar positions are guaranteed to be calculated.
+        const barLabelPlugin = {
+            id: 'pncBarLabels',
+            afterDatasetsDraw(chart) {
+                const ctx2d = chart.ctx;
+                chart.data.datasets.forEach((dataset, di) => {
+                    const meta = chart.getDatasetMeta(di);
+                    if (!meta || meta.hidden) return;
+                    meta.data.forEach((bar, i) => {
+                        const value = dataset.data[i];
+                        if (value == null || value <= 0) return;
+                        const text      = dataset.label === 'Hours' ? `${value}h` : `${value}`;
+                        const color     = `#${data[i]?.color || '5C5CEE'}`;
+                        const bgColor   = `${color}20`;
+
+                        ctx2d.save();
+                        ctx2d.font = '700 10px Inter, sans-serif';
+                        const tw   = ctx2d.measureText(text).width;
+                        const ph   = 4;   // horizontal padding
+                        const pv   = 2;   // vertical padding
+                        const bw   = tw + ph * 2;
+                        const bh   = 13 + pv * 2;
+                        const bx   = bar.x - bw / 2;
+                        const by   = bar.y - bh - 3;
+
+                        // Badge background (plain rect for max compatibility)
+                        ctx2d.fillStyle = bgColor;
+                        ctx2d.beginPath();
+                        ctx2d.rect(bx, by, bw, bh);
+                        ctx2d.fill();
+
+                        // Value text
+                        ctx2d.fillStyle    = color;
+                        ctx2d.textAlign    = 'center';
+                        ctx2d.textBaseline = 'middle';
+                        ctx2d.fillText(text, bar.x, by + bh / 2);
+                        ctx2d.restore();
+                    });
+                });
+            }
+        };
 
         workloadChart = new Chart(canvas, {
             type: 'bar',
+            plugins: [barLabelPlugin],
             data: {
                 labels: data.map(t => t.name),
                 datasets: [
@@ -1189,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                layout: { padding: { top: 22 } },
+                layout: { padding: { top: 28 } },
                 plugins: {
                     legend: {
                         position: 'top',
@@ -1197,30 +1236,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     tooltip: {
                         callbacks: {
-                            label: ctx => ctx.parsed != null ? `${ctx.dataset.label}: ${ctx.parsed.y}${ctx.dataset.label === 'Hours' ? 'h' : ''}` : ''
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}${ctx.dataset.label === 'Hours' ? 'h' : ''}`
                         }
-                    },
-                    datalabels: {
-                        display: ctx => ctx.parsed != null && ctx.parsed.y > 0,
-                        anchor: 'end',
-                        align: 'end',
-                        offset: 2,
-                        font: { size: 10, weight: '700', family: 'Inter' },
-                        color: ctx => {
-                            const hex = data[ctx.dataIndex]?.color || '555555';
-                            return `#${hex}`;
-                        },
-                        formatter: (value, ctx) => {
-                            if (!value) return null;
-                            return ctx.dataset.label === 'Hours' ? `${value}h` : `${value}`;
-                        },
-                        // Small rounded badge background
-                        backgroundColor: ctx => {
-                            const hex = data[ctx.dataIndex]?.color || '555555';
-                            return `#${hex}18`;
-                        },
-                        borderRadius: 4,
-                        padding: { top: 2, bottom: 2, left: 5, right: 5 }
                     }
                 },
                 scales: {
@@ -1229,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         grid: { color: '#F3F4F6' },
                         ticks: { font: { family: 'Inter', size: 12 } },
                         beginAtZero: true,
-                        grace: '20%'
+                        grace: '25%'
                     }
                 }
             }
