@@ -39,97 +39,98 @@
 
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-controls">
-                    <button id="sidebar-toggle-btn" class="ctrl-btn collapse-btn" type="button"
-                        title="Collapse sidebar" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
-                        <i class="fas fa-angles-left"></i>
+        <!-- Top navigation bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <a class="brand" href="./" aria-label="PNC Schedule home">
+                    <img src="pn-logo.png" alt="" class="brand-mark">
+                    <span class="brand-text">
+                        <span class="brand-name">PNC Schedule</span>
+                        <span class="brand-sub">Passerelles Numériques</span>
+                    </span>
+                </a>
+
+                <span class="topbar-divider" aria-hidden="true"></span>
+
+                <!-- Calendar picker (trainers + classes) -->
+                <div class="picker" id="picker">
+                    <button id="picker-btn" class="picker-btn" type="button" aria-haspopup="true"
+                        aria-expanded="false" aria-controls="picker-menu">
+                        <span class="color-dot" id="picker-dot"></span>
+                        <span class="picker-text">
+                            <span class="picker-kind" id="picker-kind">Calendar</span>
+                            <span class="picker-name" id="picker-name">Select…</span>
+                        </span>
+                        <i class="fas fa-chevron-down picker-caret"></i>
                     </button>
-                    <button id="theme-toggle-btn" class="ctrl-btn" type="button"
-                        title="Switch to dark mode" aria-label="Switch to dark mode">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <button id="rail-dashboard-btn" class="ctrl-btn dashboard-icon-btn" type="button"
-                        title="Dashboard" aria-label="Open dashboard">
-                        <i class="fas fa-chart-bar"></i>
-                    </button>
-                </div>
-                <div class="header-top-row">
-                    <div class="logo-container" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                        <div class="logo-text">
-                            <img src="logo.png" alt="Logo" style="max-height: 40px; display: block;">
+
+                    <div class="picker-menu" id="picker-menu" hidden>
+                        <div class="picker-search">
+                            <i class="fas fa-magnifying-glass"></i>
+                            <input type="search" id="picker-search" placeholder="Search trainers or classes"
+                                autocomplete="off" aria-label="Search trainers or classes">
                         </div>
-                        <div class="badges-wrapper" style="display: flex; gap: 6px; flex-wrap: wrap;">
-                            <div id="session-count-badge" class="session-badge" style="display: none;">
-                                <span class="badge-count">0</span>
-                                <span class="badge-label">SESSIONS</span>
+                        <div class="picker-scroll">
+                            <div class="picker-section">
+                                <div class="picker-heading">Trainers</div>
+                                <div class="checkbox-list" id="teacher-filters"><!-- Populated by JS --></div>
                             </div>
-                            <div id="hour-count-badge" class="session-badge" style="display: none;">
-                                <span class="badge-count">0</span>
-                                <span class="badge-label">HOURS</span>
+                            <div class="picker-section">
+                                <div class="picker-heading">Classes</div>
+                                <div class="checkbox-list" id="class-filters"><!-- Populated by JS --></div>
                             </div>
+                            <div class="picker-empty" id="picker-empty" hidden>No matches</div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Custom Week Navigation -->
-                    <div class="week-navigation"
-                        style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <button id="prev-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
-                                class="fas fa-chevron-left"></i></button>
-                        <div style="text-align: center; cursor: pointer;" id="today-btn" title="Go to Today">
-                            <div style="font-weight: 700; color: var(--primary-color); font-size: 14px;">W<span
-                                    id="current-week-num"></span></div>
-                            <div id="current-month-year"
-                                style="font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            </div>
-                        </div>
-                        <button id="next-week-btn" class="icon-btn" style="padding: 4px; color: var(--primary-color);"><i
-                                class="fas fa-chevron-right"></i></button>
-                    </div>
+            <div class="topbar-center">
+                <button id="today-btn" class="nav-btn today-btn" type="button" title="Go to today">Today</button>
+                <div class="stepper">
+                    <button id="prev-week-btn" class="nav-btn icon-only" type="button" title="Previous week"
+                        aria-label="Previous week"><i class="fas fa-chevron-left"></i></button>
+                    <button id="next-week-btn" class="nav-btn icon-only" type="button" title="Next week"
+                        aria-label="Next week"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="week-label">
+                    <span class="week-pill">W<span id="current-week-num"></span></span>
+                    <span id="current-month-year" class="week-range"></span>
                 </div>
 
-                <!-- Mobile View Toggle -->
-                <div class="mobile-view-toggle">
-                    <button class="toggle-btn active" data-view="week">
-                        <i class="fas fa-calendar-week"></i> Weekly View
+                <!-- Week / Day toggle (mobile) -->
+                <div class="mobile-view-toggle" role="tablist">
+                    <button class="toggle-btn active" data-view="week" type="button">
+                        <i class="fas fa-calendar-week"></i><span>Week</span>
                     </button>
-                    <button class="toggle-btn" data-view="day">
-                        <i class="fas fa-calendar-day"></i> Daily View
+                    <button class="toggle-btn" data-view="day" type="button">
+                        <i class="fas fa-calendar-day"></i><span>Day</span>
                     </button>
                 </div>
             </div>
 
-            <div class="sidebar-filters" style="margin-top: 0; border-top: none;">
-                <details class="filter-group" id="trainers-details" open>
-                    <summary class="section-title">
-                        Trainers
-                        <i class="fas fa-chevron-down"></i>
-                    </summary>
-                    <div class="checkbox-list scrollable" id="teacher-filters">
-                        <!-- Populated by JS -->
+            <div class="topbar-right">
+                <div class="topbar-stats">
+                    <div id="session-count-badge" class="session-badge" style="display: none;">
+                        <span class="badge-count">0</span>
+                        <span class="badge-label">Sessions</span>
                     </div>
-                </details>
-
-                <details class="filter-group" id="classes-details" open>
-                    <summary class="section-title">
-                        Classes
-                        <i class="fas fa-chevron-down"></i>
-                    </summary>
-                    <div class="checkbox-list scrollable" id="class-filters">
-                        <!-- Populated by JS -->
+                    <div id="hour-count-badge" class="session-badge" style="display: none;">
+                        <span class="badge-count">0</span>
+                        <span class="badge-label">Hours</span>
                     </div>
-                </details>
-            </div>
+                </div>
 
-            <!-- Dashboard Button — Desktop Only -->
-            <div class="dashboard-btn-wrapper">
-                <button id="open-dashboard-btn" class="btn btn-primary btn-block dashboard-open-btn">
-                    <i class="fas fa-chart-bar"></i> Dashboard
+                <button id="theme-toggle-btn" class="nav-btn icon-only" type="button"
+                    title="Switch to dark mode" aria-label="Switch to dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+
+                <button id="open-dashboard-btn" class="btn btn-primary dashboard-open-btn" type="button">
+                    <i class="fas fa-chart-bar"></i><span>Dashboard</span>
                 </button>
             </div>
-        </aside>
+        </header>
 
         <main class="main-content">
             <div class="content-body" style="padding: 0; height: 100%; overflow: hidden;">

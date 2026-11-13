@@ -246,9 +246,9 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             toggleBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            
-            const view = e.target.getAttribute('data-view');
+            e.currentTarget.classList.add('active');
+
+            const view = e.currentTarget.getAttribute('data-view');
             if (view === 'week') {
                 if(weeklyViewEl) weeklyViewEl.style.display = 'block';
                 if(dailyViewEl) dailyViewEl.style.display = 'none';
@@ -549,11 +549,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const hourCountEl = hourBadgeEl.querySelector('.badge-count');
             const hourLabelEl = hourBadgeEl.querySelector('.badge-label');
 
-            if (countEl) countEl.textContent = isDailyView ? `${entityName} ${count}` : count;
-            if (labelEl) labelEl.textContent = 'SESSIONS';
+            if (countEl) countEl.textContent = count;
+            if (labelEl) labelEl.textContent = 'sessions';
 
             if (hourCountEl) hourCountEl.textContent = hours;
-            if (hourLabelEl) hourLabelEl.textContent = 'HOURS';
+            if (hourLabelEl) hourLabelEl.textContent = 'hours';
 
             if (isTeacher && count > 15) {
                 const excessHours = hours - 22.5;
@@ -787,39 +787,83 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     } catch (e) {}
 
-    // ── Collapsible sidebar ──
-    const sidebarEl = document.getElementById('sidebar');
-    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+    // ── Calendar picker (navbar dropdown) ──
+    const pickerBtn = document.getElementById('picker-btn');
+    const pickerMenu = document.getElementById('picker-menu');
+    const pickerSearch = document.getElementById('picker-search');
+    const pickerEmpty = document.getElementById('picker-empty');
 
-    function setSidebarCollapsed(collapsed, persist) {
-        if (!sidebarEl) return;
-        sidebarEl.classList.toggle('collapsed', collapsed);
-        if (sidebarToggleBtn) {
-            const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
-            sidebarToggleBtn.title = label;
-            sidebarToggleBtn.setAttribute('aria-label', label);
-            sidebarToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+    function updatePickerLabel() {
+        const checked = document.querySelector('input[name="calendar-selection"]:checked');
+        const nameEl = document.getElementById('picker-name');
+        const kindEl = document.getElementById('picker-kind');
+        const dotEl = document.getElementById('picker-dot');
+        if (!checked || !nameEl) return;
+        const isTeacher = checked.id.startsWith('t-');
+        const item = (isTeacher ? teachers : classes).find(x => x.id === checked.value);
+        if (!item) return;
+        nameEl.textContent = item.name;
+        kindEl.textContent = isTeacher ? (item.role || 'Trainer') : ('Class · ' + (item.room || ''));
+        dotEl.style.backgroundColor = '#' + item.color;
+    }
+
+    function filterPicker(query) {
+        const q = query.trim().toLowerCase();
+        let total = 0;
+        document.querySelectorAll('#picker-menu .picker-section').forEach(section => {
+            let visible = 0;
+            section.querySelectorAll('.checkbox-item').forEach(item => {
+                const match = !q || item.textContent.toLowerCase().includes(q);
+                item.classList.toggle('is-hidden', !match);
+                if (match) visible++;
+            });
+            section.classList.toggle('is-empty', visible === 0);
+            total += visible;
+        });
+        if (pickerEmpty) pickerEmpty.hidden = total > 0;
+    }
+
+    function openPicker() {
+        pickerMenu.hidden = false;
+        pickerBtn.setAttribute('aria-expanded', 'true');
+        const checked = pickerMenu.querySelector('input:checked + label');
+        if (checked) checked.scrollIntoView({ block: 'nearest' });
+        if (window.innerWidth > 768 && pickerSearch) pickerSearch.focus();
+    }
+
+    function closePicker(returnFocus) {
+        if (pickerMenu.hidden) return;
+        pickerMenu.hidden = true;
+        pickerBtn.setAttribute('aria-expanded', 'false');
+        if (pickerSearch && pickerSearch.value) { pickerSearch.value = ''; filterPicker(''); }
+        if (returnFocus) pickerBtn.focus();
+    }
+
+    if (pickerBtn && pickerMenu) {
+        pickerBtn.addEventListener('click', () => pickerMenu.hidden ? openPicker() : closePicker(false));
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#picker')) closePicker(false);
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closePicker(true);
+        });
+        pickerMenu.addEventListener('change', e => {
+            if (e.target.name === 'calendar-selection') {
+                updatePickerLabel();
+                closePicker(true);
+            }
+        });
+        if (pickerSearch) {
+            pickerSearch.addEventListener('input', () => filterPicker(pickerSearch.value));
+            pickerSearch.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    const first = pickerMenu.querySelector('.checkbox-item:not(.is-hidden) input');
+                    if (first) { first.checked = true; first.dispatchEvent(new Event('change', { bubbles: true })); }
+                }
+            });
         }
-        if (persist) { try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {} }
     }
-
-    let savedCollapsed = null;
-    try { savedCollapsed = localStorage.getItem('sidebarCollapsed'); } catch (e) {}
-    setSidebarCollapsed(savedCollapsed === '1', false);
-
-    if (sidebarToggleBtn) {
-        sidebarToggleBtn.addEventListener('click', () => {
-            setSidebarCollapsed(!sidebarEl.classList.contains('collapsed'), true);
-        });
-    }
-
-    const railDashBtn = document.getElementById('rail-dashboard-btn');
-    if (railDashBtn) {
-        railDashBtn.addEventListener('click', () => {
-            const btn = document.getElementById('open-dashboard-btn');
-            if (btn) btn.click();
-        });
-    }
+    updatePickerLabel();
 
     // ── Open / Close dashboard ──
     const openDashBtn = document.getElementById('open-dashboard-btn');
