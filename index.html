@@ -24,13 +24,38 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
     <link rel="apple-touch-icon" href="pn-logo.png">
+
+    <!-- Apply saved theme / sidebar state before first paint (prevents flash) -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+        })();
+    </script>
 </head>
 
 <body>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <div class="sidebar-controls">
+                    <button id="sidebar-toggle-btn" class="ctrl-btn collapse-btn" type="button"
+                        title="Collapse sidebar" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
+                        <i class="fas fa-angles-left"></i>
+                    </button>
+                    <button id="theme-toggle-btn" class="ctrl-btn" type="button"
+                        title="Switch to dark mode" aria-label="Switch to dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="rail-dashboard-btn" class="ctrl-btn dashboard-icon-btn" type="button"
+                        title="Dashboard" aria-label="Open dashboard">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                </div>
                 <div class="header-top-row">
                     <div class="logo-container" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <div class="logo-text">

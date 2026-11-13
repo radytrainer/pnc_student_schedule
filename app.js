@@ -740,6 +740,87 @@ document.addEventListener('DOMContentLoaded', function () {
         if (t) t.value = ym;
     })();
 
+    // ── Theme (light / dark) ──
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+    function chartTheme() {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return dark ? { text: '#9AA1B2', grid: '#2A2F3C' } : { text: '#6C757D', grid: '#F3F4F6' };
+    }
+
+    function applyTheme(theme, persist) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (persist) { try { localStorage.setItem('theme', theme); } catch (e) {} }
+        const dark = theme === 'dark';
+        if (themeBtn) {
+            themeBtn.innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+            themeBtn.title = label;
+            themeBtn.setAttribute('aria-label', label);
+        }
+        if (themeMeta) themeMeta.setAttribute('content', dark ? '#161922' : '#ffffff');
+        if (typeof workloadChart !== 'undefined' && workloadChart) {
+            const c = chartTheme();
+            const sc = workloadChart.options.scales;
+            sc.x.ticks.color = c.text;
+            sc.y.ticks.color = c.text;
+            sc.y.grid.color = c.grid;
+            workloadChart.options.plugins.legend.labels.color = c.text;
+            workloadChart.update('none');
+        }
+    }
+
+    applyTheme(document.documentElement.getAttribute('data-theme') || 'light', false);
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            applyTheme(next, true);
+        });
+    }
+
+    // Follow the OS setting until the user picks a theme explicitly
+    try {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!localStorage.getItem('theme')) applyTheme(e.matches ? 'dark' : 'light', false);
+        });
+    } catch (e) {}
+
+    // ── Collapsible sidebar ──
+    const sidebarEl = document.getElementById('sidebar');
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+
+    function setSidebarCollapsed(collapsed, persist) {
+        if (!sidebarEl) return;
+        sidebarEl.classList.toggle('collapsed', collapsed);
+        if (sidebarToggleBtn) {
+            const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+            sidebarToggleBtn.title = label;
+            sidebarToggleBtn.setAttribute('aria-label', label);
+            sidebarToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+        }
+        if (persist) { try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {} }
+    }
+
+    let savedCollapsed = null;
+    try { savedCollapsed = localStorage.getItem('sidebarCollapsed'); } catch (e) {}
+    setSidebarCollapsed(savedCollapsed === '1', false);
+
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            setSidebarCollapsed(!sidebarEl.classList.contains('collapsed'), true);
+        });
+    }
+
+    const railDashBtn = document.getElementById('rail-dashboard-btn');
+    if (railDashBtn) {
+        railDashBtn.addEventListener('click', () => {
+            const btn = document.getElementById('open-dashboard-btn');
+            if (btn) btn.click();
+        });
+    }
+
     // ── Open / Close dashboard ──
     const openDashBtn = document.getElementById('open-dashboard-btn');
     if (openDashBtn) {
@@ -1227,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyle: 'circle' }
+                        labels: { color: chartTheme().text, font: { family: 'Inter', size: 12 }, usePointStyle: true, pointStyle: 'circle' }
                     },
                     tooltip: {
                         callbacks: {
@@ -1236,10 +1317,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } },
+                    x: { grid: { display: false }, ticks: { color: chartTheme().text, font: { family: 'Inter', size: 12 } } },
                     y: {
-                        grid: { color: '#F3F4F6' },
-                        ticks: { font: { family: 'Inter', size: 12 } },
+                        grid: { color: chartTheme().grid },
+                        ticks: { color: chartTheme().text, font: { family: 'Inter', size: 12 } },
                         beginAtZero: true,
                         grace: '25%'
                     }
