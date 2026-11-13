@@ -42,27 +42,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Data from User
     const teachers = [
-        { id: 'him', name: 'Him', calendarId: 'passerellesnumeriques.org_343437393530363136@resource.calendar.google.com', color: '5C5CEE', role: 'IT Trainer' },
-        { id: 'lavy', name: 'Lavy', calendarId: 'passerellesnumeriques.org_2d3331373838323735363330@resource.calendar.google.com', color: '10B981', role: 'ENG/PL Trainer' },
-        { id: 'mengheang', name: 'Mengheang', calendarId: 'c_1886h9lqonri4ig0noe2vrfvp8fb8@resource.calendar.google.com', color: 'F59E0B', role: 'IT Trainer' },
         { id: 'rady', name: 'Rady', calendarId: 'passerellesnumeriques.org_2d3132393337373934393735@resource.calendar.google.com', color: 'EF4444', role: 'IT Coor' },
         { id: 'yon', name: 'Yon', calendarId: 'c_1882ckecmfgb0h7fmha0u9t3rbd5g@resource.calendar.google.com', color: '8B5CF6', role: 'IT Trainer' },
-        { id: 'savoeurn', name: 'Savoeurn', calendarId: 'passerellesnumeriques.org_3539373731343733353932@resource.calendar.google.com', color: 'EC4899', role: 'IT Trainer' },
-        { id: 'ouchi', name: 'Ouchi', calendarId: 'c_188b20cg9s5uoh12jobk987cfbh2g@resource.calendar.google.com', color: '06B6D4', role: 'ENG/PL Trainer' },
-        { id: 'sokhom', name: 'Sokhom', calendarId: 'passerellesnumeriques.org_2d3633393338303431343434@resource.calendar.google.com', color: 'F97316', role: 'ENG/PL Coor' },
+        { id: 'savoeurn', name: 'Savoeurn', calendarId: 'passerellesnumeriques.org_3539373731343733353932@resource.calendar.google.com', color: 'EC4899', role: 'SNAC Coor' },
+        { id: 'mengheang', name: 'Mengheang', calendarId: 'c_1886h9lqonri4ig0noe2vrfvp8fb8@resource.calendar.google.com', color: 'F59E0B', role: 'IT Trainer' },
+        { id: 'Poleak', name: 'Poleak', calendarId: 'c_188d84f4cbbmcgnuk0vr9q7i0euqu@resource.calendar.google.com', color: '3B82F6', role: 'IT Trainer' },
+        // will replace her calendar ID later
+        { id: 'Sreypov', name: 'Sreypov', calendarId: 'c_188d84f4cbbmcgnuk0vr9q7i0euqu@resource.calendar.google.com', color: '5C5CEE', role: 'IT Trainer' },
+        { id: 'lavy', name: 'Lavy', calendarId: 'passerellesnumeriques.org_2d3331373838323735363330@resource.calendar.google.com', color: '10B981', role: 'ENG/PL Trainer' },
         { id: 'sreyleap', name: 'Sreyleap', calendarId: 'c_1884lpdesdih0irbl36ss1j7vt7aq@resource.calendar.google.com', color: '14B8A6', role: 'English Trainer' },
+        { id: 'ouchi', name: 'Ouchi', calendarId: 'c_188b20cg9s5uoh12jobk987cfbh2g@resource.calendar.google.com', color: '06B6D4', role: 'ENG/PL Trainer' },
         { id: 'puthy', name: 'Puthy', calendarId: 'passerellesnumeriques.org_3733323437383733383932@resource.calendar.google.com', color: '6366F1', role: 'PL Trainer' },
-        { id: 'mesa', name: 'Mesa', calendarId: 'c_1885a09ufiueqj6hn3tv09m5ngs5c@resource.calendar.google.com', color: '3B82F6', role: 'IT Trainer' }
+        { id: 'sokhom', name: 'Sokhom', calendarId: 'passerellesnumeriques.org_2d3633393338303431343434@resource.calendar.google.com', color: 'F97316', role: 'ENG/PL Coor' },
     ];
 
     const classes = [
-        { id: 'y2a', name: 'WEP/Y2-A', room: 'B12', calendarId: 'c_4641706806a2bc464ecfce3054fce93b2ebd72161c407d074ba961f730e4d793@group.calendar.google.com', color: '4F46E5' },
-        { id: 'y2b', name: 'WEP/Y2-B', room: 'B13', calendarId: 'c_60f24913a85bf20e950e70146ff604d69d14749a316da204fa485e7d6731a12b@group.calendar.google.com', color: '059669' },
-        { id: 'y2c', name: 'WEP/Y2-C', room: 'B22', calendarId: 'c_2da1c687af3c99d3ecaf14bbc5d82b9cc9b0fc75dcca546fd690ea5070091940@group.calendar.google.com', color: 'D97706' },
-        { id: 'y1a', name: 'WEP/Y1-A', room: 'A22', calendarId: 'c_dab09f6598d565f82430eaa5c51ab4b01045bb20a340a7273f4a67a911c6f61c@group.calendar.google.com', color: 'DC2626' },
-        { id: 'y1b', name: 'WEP/Y1-B', room: 'B23', calendarId: 'c_2e32feb66be240456f961cc2f43c0bbef9c5ff6cbb68abdea333adf1739f9833@group.calendar.google.com', color: '7C3AED' },
-        { id: 'y1c', name: 'WEP/Y1-C', room: 'B31', calendarId: 'c_4f19b4ea9a24523bb7910e4d19bb0f426abdfc3e2b67850a4d5770e4755674db@group.calendar.google.com', color: 'DB2777' },
-        { id: 'y1d', name: 'SNA/Y1', room: 'A21', calendarId: 'c_60360764ac056113deb843d3bc1a8dd6e66a0bbddcf4dbd1ff4ea3453417dc3e@group.calendar.google.com', color: '0891B2' }
+        
+        { id: 'y2a', name: 'WEP/Y2-A', room: 'A22', calendarId: 'c_dab09f6598d565f82430eaa5c51ab4b01045bb20a340a7273f4a67a911c6f61c@group.calendar.google.com', color: 'DC2626' },
+        { id: 'y2b', name: 'WEP/Y2-B', room: 'B12', calendarId: 'c_2e32feb66be240456f961cc2f43c0bbef9c5ff6cbb68abdea333adf1739f9833@group.calendar.google.com', color: '7C3AED' },
+        { id: 'y2c', name: 'WEP/Y2-C', room: 'B13', calendarId: 'c_4f19b4ea9a24523bb7910e4d19bb0f426abdfc3e2b67850a4d5770e4755674db@group.calendar.google.com', color: 'DB2777' },
+        { id: 'y2d', name: 'SNAC/Y2', room: 'A21', calendarId: 'c_60360764ac056113deb843d3bc1a8dd6e66a0bbddcf4dbd1ff4ea3453417dc3e@group.calendar.google.com', color: '0891B2' }
     ];
 
     // Date Management
